@@ -1,0 +1,83 @@
+---
+import type { Product } from "@lib/types";
+import type { Currency } from "@lib/currency";
+import { formatMoney } from "@lib/currency";
+import { discountPct } from "@lib/utils";
+import WishlistButton from "./react/WishlistButton.tsx";
+import AddToCartButton from "./react/AddToCartButton.tsx";
+
+export interface Props {
+  product: Product;
+  currency: Currency;
+}
+const { product, currency } = Astro.props;
+const off = discountPct(product.mrp, product.price);
+const outOfStock = product.stock <= 0;
+---
+
+<article class="card group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+  <div class="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-800">
+    <a href={`/products/${product.slug}`} class="block h-full w-full">
+      {
+        product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            class="h-full w-full object-contain p-4 transition-transform group-hover:scale-105"
+          />
+        ) : (
+          <div class="grid h-full w-full place-items-center text-brand-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m10.5 20.25 7.5-7.5a3.75 3.75 0 1 0-5.303-5.303l-8.485 8.485a2.5 2.5 0 0 0 3.536 3.536l7.07-7.07" />
+            </svg>
+          </div>
+        )
+      }
+    </a>
+    {off > 0 && (
+      <span class="badge absolute left-2 top-2 bg-brand-600 text-white">
+        {off}% OFF
+      </span>
+    )}
+    <div class="absolute right-2 top-2">
+      <WishlistButton client:visible productId={product.id} />
+    </div>
+  </div>
+
+  <div class="flex flex-1 flex-col p-4">
+    {product.category?.name && (
+      <span class="mb-1 text-xs font-medium text-brand-600 dark:text-brand-400">
+        {product.category.name}
+      </span>
+    )}
+    <h3 class="mb-1 line-clamp-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <a href={`/products/${product.slug}`} class="hover:text-brand-600">
+        {product.name}
+      </a>
+    </h3>
+    {product.unit_size && (
+      <p class="mb-2 text-xs text-slate-500">Pack: {product.unit_size}</p>
+    )}
+    <div class="mt-auto">
+      <div class="mb-3 flex items-baseline gap-2">
+        <span class="text-lg font-bold text-slate-900 dark:text-white">
+          {formatMoney(product.price, currency)}
+        </span>
+        {off > 0 && (
+          <span class="text-sm text-slate-400 line-through">
+            {formatMoney(product.mrp, currency)}
+          </span>
+        )}
+      </div>
+      <AddToCartButton
+        client:visible
+        productId={product.id}
+        disabled={outOfStock}
+        label={outOfStock ? "Out of Stock" : "Add to Cart"}
+        className="btn-primary w-full text-xs"
+      />
+    </div>
+  </div>
+</article>

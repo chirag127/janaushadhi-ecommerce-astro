@@ -1,0 +1,10 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import OrderAdmin from "@components/react/admin/OrderAdmin.tsx";
+export const prerender = false;
+---
+
+<AdminLayout title="Orders" active="orders">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Orders</h1>
+  <OrderAdmin client:only="react" />
+</AdminLayout>

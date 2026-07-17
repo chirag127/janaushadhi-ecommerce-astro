@@ -1,0 +1,118 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getBlogPostBySlug } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import { formatDate } from "@lib/utils";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect("/blog");
+}
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const post = await getBlogPostBySlug(insforge, slug);
+
+if (!post) {
+  return Astro.redirect("/blog");
+}
+
+/**
+ * Detect whether content looks like HTML.
+ * A rough heuristic: contains an opening angle-bracket tag.
+ */
+const looksLikeHtml = post.content ? /<[a-z][\s\S]*?>/i.test(post.content) : false;
+
+/**
+ * Split plain-text content on blank lines to produce paragraphs.
+ */
+const paragraphs =
+  !looksLikeHtml && post.content
+    ? post.content
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+    : [];
+---
+
+<Layout
+  title={post.title}
+  description={post.excerpt ?? undefined}
+  image={post.cover_image_url ?? undefined}
+  type="article"
+>
+  <Breadcrumbs
+    items={[
+      { label: t("nav.blog"), href: "/blog" },
+      { label: post.title },
+    ]}
+  />
+
+  <article class="container-page pb-16">
+    <!-- Cover image -->
+    {
+      post.cover_image_url && (
+        <div class="mb-8 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+          <img
+            src={post.cover_image_url}
+            alt={post.title}
+            class="w-full max-h-96 object-cover"
+          />
+        </div>
+      )
+    }
+
+    <!-- Meta -->
+    <div class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+      <span>{post.author}</span>
+      {post.published_at && (
+        <>
+          <span class="text-slate-300 dark:text-slate-600">·</span>
+          <time datetime={post.published_at}>{formatDate(post.published_at)}</time>
+        </>
+      )}
+    </div>
+
+    <!-- Title -->
+    <h1 class="mb-6 text-3xl font-bold leading-tight text-slate-900 dark:text-white">
+      {post.title}
+    </h1>
+
+    <!-- Content -->
+    {
+      post.content ? (
+        looksLikeHtml ? (
+          <div
+            class="prose prose-slate max-w-none dark:prose-invert"
+            set:html={post.content}
+          />
+        ) : (
+          <div class="prose prose-slate max-w-none dark:prose-invert">
+            {paragraphs.map((para) => (
+              <p>{para}</p>
+            ))}
+          </div>
+        )
+      ) : (
+        post.excerpt && (
+          <div class="prose prose-slate max-w-none dark:prose-invert">
+            <p>{post.excerpt}</p>
+          </div>
+        )
+      )
+    }
+
+    <!-- Back link -->
+    <div class="mt-12 border-t border-slate-200 pt-6 dark:border-slate-700">
+      <a href="/blog" class="text-sm text-brand-600 hover:underline dark:text-brand-400">
+        &larr; Back to Blog
+      </a>
+    </div>
+  </article>
+</Layout>

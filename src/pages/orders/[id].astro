@@ -1,0 +1,93 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { useTranslations, type Locale } from "@lib/i18n";
+import { formatMoney, type Currency } from "@lib/currency";
+import { formatDate } from "@lib/utils";
+import type { Order, OrderItem, ShippingAddress } from "@lib/types";
+
+export const prerender = false;
+
+const { id } = Astro.params;
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+const user = Astro.locals.user!;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const { data } = await insforge.database
+  .from("orders")
+  .select("*, order_items(*)")
+  .eq("id", id!)
+  .eq("user_id", user.id)
+  .maybeSingle();
+const order = data as (Order & { order_items: OrderItem[] }) | null;
+if (!order) return Astro.redirect("/orders");
+
+const url = new URL(Astro.request.url);
+const paid = url.searchParams.get("paid") === "1";
+const failed = url.searchParams.get("failed") === "1";
+const placed = url.searchParams.get("placed") === "1";
+const addr = order.shipping_address as ShippingAddress | null;
+const isCod = (addr as { _payment_method?: string } | null)?._payment_method === "cod";
+---
+
+<Layout title={`Order ${order.order_number}`} noindex>
+  <Breadcrumbs items={[{ label: t("nav.orders"), href: "/orders" }, { label: order.order_number }]} />
+  <div class="container-page pb-12">
+    {paid && <div class="mb-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-700 dark:bg-brand-950">Payment successful! Your order is confirmed.</div>}
+    {placed && <div class="mb-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-700 dark:bg-brand-950">Order placed! You will pay <strong>Cash on Delivery</strong> when your order arrives.</div>}
+    {failed && <div class="mb-4 rounded-lg bg-rose-50 p-4 text-sm text-rose-700">Payment could not be verified. If money was deducted it will be refunded.</div>}
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{order.order_number}</h1>
+        <p class="text-sm text-slate-500">Placed on {formatDate(order.created_at)}</p>
+      </div>
+      <div class="flex gap-2">
+        <span class="badge bg-slate-100 capitalize text-slate-700">Status: {order.status}</span>
+        <span class="badge bg-slate-100 capitalize text-slate-700">Payment: {order.payment_status}</span>
+      </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div class="card divide-y divide-slate-200 dark:divide-slate-800">
+        {
+          order.order_items.map((it) => (
+            <div class="flex items-center justify-between p-4">
+              <div>
+                <p class="font-medium text-slate-900 dark:text-white">{it.product_name}</p>
+                <p class="text-xs text-slate-500">{formatMoney(it.unit_price, currency)} × {it.quantity}</p>
+              </div>
+              <span class="font-semibold">{formatMoney(it.line_total, currency)}</span>
+            </div>
+          ))
+        }
+      </div>
+
+      <aside class="space-y-4">
+        <div class="card space-y-2 p-5 text-sm">
+          <h2 class="font-semibold text-slate-900 dark:text-white">Summary</h2>
+          <div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span>{formatMoney(order.subtotal, currency)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Shipping</span><span>{order.shipping === 0 ? "FREE" : formatMoney(order.shipping, currency)}</span></div>
+          <div class="flex justify-between border-t border-slate-200 pt-2 font-bold dark:border-slate-800"><span>Total</span><span>{formatMoney(order.total, currency)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Payment</span><span>{isCod ? "Cash on Delivery" : "Razorpay (online)"}</span></div>
+          {order.is_test_payment && <p class="text-xs text-amber-600">Test payment</p>}
+        </div>
+        {
+          addr && (
+            <div class="card p-5 text-sm">
+              <h2 class="mb-2 font-semibold text-slate-900 dark:text-white">Shipping Address</h2>
+              <p class="text-slate-600 dark:text-slate-300">{addr.full_name}</p>
+              <p class="text-slate-600 dark:text-slate-300">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
+              <p class="text-slate-600 dark:text-slate-300">{addr.city}, {addr.state} {addr.pincode}</p>
+              <p class="text-slate-600 dark:text-slate-300">{addr.country}</p>
+              <p class="mt-1 text-slate-500">📞 {addr.phone}</p>
+            </div>
+          )
+        }
+      </aside>
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,21 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import WishlistView from "@components/react/WishlistView.tsx";
+import { useTranslations, type Locale } from "@lib/i18n";
+import type { Currency } from "@lib/currency";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+---
+
+<Layout title={t("wishlist.title")} noindex>
+  <Breadcrumbs items={[{ label: t("wishlist.title") }]} />
+  <div class="container-page pb-12">
+    <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">{t("wishlist.title")}</h1>
+    <WishlistView client:only="react" currency={currency} />
+  </div>
+</Layout>

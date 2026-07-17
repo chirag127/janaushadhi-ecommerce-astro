@@ -1,0 +1,41 @@
+---
+export interface Props {
+  rating: number;
+  count?: number;
+  size?: "sm" | "md";
+}
+const { rating, count, size = "sm" } = Astro.props;
+const full = Math.floor(rating);
+const half = rating - full >= 0.5;
+const cls = size === "md" ? "h-5 w-5" : "h-4 w-4";
+const stars = [1, 2, 3, 4, 5];
+---
+
+<div class="inline-flex items-center gap-1">
+  <div class="flex text-amber-400">
+    {
+      stars.map((s) => {
+        const filled = s <= full;
+        const isHalf = !filled && s === full + 1 && half;
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" class={cls} viewBox="0 0 24 24" fill={filled ? "currentColor" : isHalf ? "url(#half)" : "none"} stroke="currentColor" stroke-width="1.2">
+            {isHalf && (
+              <defs>
+                <linearGradient id="half">
+                  <stop offset="50%" stop-color="currentColor" />
+                  <stop offset="50%" stop-color="transparent" />
+                </linearGradient>
+              </defs>
+            )}
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5a.56.56 0 0 1 1.04 0l2.13 4.31 4.76.69c.5.07.7.69.34 1.04l-3.45 3.36.82 4.74c.08.5-.44.88-.88.64L12 16.35l-4.26 2.24c-.44.24-.96-.14-.88-.64l.82-4.74L4.23 9.85c-.36-.35-.16-.97.34-1.04l4.76-.69 2.15-4.62Z" />
+          </svg>
+        );
+      })
+    }
+  </div>
+  {
+    typeof count === "number" && (
+      <span class="text-xs text-slate-500">({count})</span>
+    )
+  }
+</div>

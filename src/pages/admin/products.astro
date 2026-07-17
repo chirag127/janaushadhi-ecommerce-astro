@@ -1,0 +1,19 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import ProductAdmin from "@components/react/admin/ProductAdmin.tsx";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getCategories } from "@lib/queries";
+import type { Category } from "@lib/types";
+
+export const prerender = false;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const categories = (await getCategories(insforge)) as Category[];
+---
+
+<AdminLayout title="Products" active="products">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Products</h1>
+  </div>
+  <ProductAdmin client:only="react" categories={categories.map((c) => ({ id: c.id, name: c.name }))} />
+</AdminLayout>

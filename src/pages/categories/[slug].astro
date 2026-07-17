@@ -1,0 +1,77 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import ProductCard from "@components/ProductCard.astro";
+import Pagination from "@components/Pagination.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getCategoryBySlug, getProducts, PAGE_SIZE } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import type { Currency } from "@lib/currency";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const category = await getCategoryBySlug(insforge, slug!);
+if (!category) return Astro.redirect("/404");
+
+const url = new URL(Astro.request.url);
+const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+const sort = (url.searchParams.get("sort") ?? "newest") as
+  | "newest"
+  | "price_asc"
+  | "price_desc"
+  | "name";
+
+const { products, total } = await getProducts(insforge, {
+  categoryId: category.id,
+  page,
+  sort,
+});
+
+const baseUrl = `/categories/${slug}${sort !== "newest" ? `?sort=${sort}` : ""}`;
+const sortOptions = [
+  { value: "newest", label: "Newest" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "name", label: "Name (A-Z)" },
+];
+---
+
+<Layout
+  title={category.name}
+  description={category.description ?? `Generic medicines in ${category.name}`}
+>
+  <Breadcrumbs items={[{ label: t("nav.categories"), href: "/categories" }, { label: category.name }]} />
+  <div class="container-page pb-12">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">{category.name}</h1>
+      {category.description && <p class="mt-1 max-w-2xl text-sm text-slate-500">{category.description}</p>}
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-slate-500">{total} {total === 1 ? "product" : "products"}</p>
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm text-slate-500">{t("common.sort")}:</label>
+        <select name="sort" onchange="this.form.submit()" class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+          {sortOptions.map((o) => <option value={o.value} selected={sort === o.value}>{o.label}</option>)}
+        </select>
+      </form>
+    </div>
+
+    {
+      products.length === 0 ? (
+        <div class="card p-12 text-center text-slate-500">No products in this category yet.</div>
+      ) : (
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {products.map((p) => <ProductCard product={p} currency={currency} />)}
+        </div>
+      )
+    }
+    <Pagination page={page} total={total} pageSize={PAGE_SIZE} baseUrl={baseUrl} />
+  </div>
+</Layout>

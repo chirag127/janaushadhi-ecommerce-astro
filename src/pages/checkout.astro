@@ -1,0 +1,22 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import CheckoutView from "@components/react/CheckoutView.tsx";
+import { useTranslations, type Locale } from "@lib/i18n";
+import type { Currency } from "@lib/currency";
+
+export const prerender = false;
+
+// middleware already guards /checkout for auth
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+---
+
+<Layout title={t("checkout.title")} noindex>
+  <Breadcrumbs items={[{ label: t("cart.title"), href: "/cart" }, { label: t("checkout.title") }]} />
+  <div class="container-page pb-12">
+    <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">{t("checkout.title")}</h1>
+    <CheckoutView client:only="react" currency={currency} />
+  </div>
+</Layout>

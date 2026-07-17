@@ -1,0 +1,47 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import ProfileForm from "@components/react/ProfileForm.tsx";
+import AddressBook from "@components/react/AddressBook.tsx";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { useTranslations, type Locale } from "@lib/i18n";
+
+export const prerender = false;
+
+// middleware guards /account
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+const user = Astro.locals.user!;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const { data: profile } = await insforge.database
+  .from("profiles")
+  .select("full_name, phone")
+  .eq("id", user.id)
+  .maybeSingle();
+const p = (profile as { full_name?: string; phone?: string } | null) ?? {};
+---
+
+<Layout title={t("nav.account")} noindex>
+  <Breadcrumbs items={[{ label: t("nav.account") }]} />
+  <div class="container-page grid gap-6 pb-12 md:grid-cols-[220px_1fr]">
+    <aside class="space-y-1">
+      <a href="/account" class="block rounded-lg bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">{t("nav.account")}</a>
+      <a href="/orders" class="block rounded-lg px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.orders")}</a>
+      <a href="/wishlist" class="block rounded-lg px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.wishlist")}</a>
+      <form method="post" action="/api/auth/signout">
+        <button type="submit" class="block w-full rounded-lg px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.logout")}</button>
+      </form>
+    </aside>
+    <section>
+      <h1 class="mb-4 text-2xl font-bold text-slate-900 dark:text-white">{t("nav.account")}</h1>
+      <div class="card p-6">
+        <p class="mb-4 text-sm text-slate-500">Email: <span class="font-medium text-slate-700 dark:text-slate-200">{user.email}</span></p>
+        <ProfileForm client:load initialName={p.full_name ?? ""} initialPhone={p.phone ?? ""} />
+      </div>
+      <div class="card mt-6 p-6">
+        <AddressBook client:load />
+      </div>
+    </section>
+  </div>
+</Layout>

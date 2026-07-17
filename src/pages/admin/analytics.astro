@@ -1,0 +1,158 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { formatMoney } from "@lib/currency";
+
+export const prerender = false;
+
+interface OrderLite {
+  id: string;
+  total: number;
+  status: string;
+  created_at: string;
+}
+interface ItemLite {
+  product_name: string;
+  quantity: number;
+  line_total: number;
+}
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+
+const { data: ordData } = await insforge.database
+  .from("orders")
+  .select("id, total, status, created_at")
+  .order("created_at", { ascending: false })
+  .limit(1000);
+const orders = (ordData as OrderLite[]) ?? [];
+
+const { data: itemData } = await insforge.database
+  .from("order_items")
+  .select("product_name, quantity, line_total")
+  .limit(2000);
+const items = (itemData as ItemLite[]) ?? [];
+
+const revenueStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
+const paidOrders = orders.filter((o) => revenueStatuses.has(o.status));
+const totalRevenue = paidOrders.reduce((s, o) => s + (o.total ?? 0), 0);
+const avgOrder = paidOrders.length ? totalRevenue / paidOrders.length : 0;
+
+// Revenue by month (last 6).
+const months: { key: string; label: string; revenue: number; count: number }[] = [];
+const now = new Date();
+for (let i = 5; i >= 0; i--) {
+  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  months.push({
+    key,
+    label: d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" }),
+    revenue: 0,
+    count: 0,
+  });
+}
+for (const o of paidOrders) {
+  const key = o.created_at.slice(0, 7);
+  const m = months.find((x) => x.key === key);
+  if (m) {
+    m.revenue += o.total ?? 0;
+    m.count += 1;
+  }
+}
+const maxRev = Math.max(1, ...months.map((m) => m.revenue));
+
+// Status breakdown.
+const statusCounts = new Map<string, number>();
+for (const o of orders) statusCounts.set(o.status, (statusCounts.get(o.status) ?? 0) + 1);
+
+// Top products by quantity sold.
+const prodMap = new Map<string, { qty: number; revenue: number }>();
+for (const it of items) {
+  const cur = prodMap.get(it.product_name) ?? { qty: 0, revenue: 0 };
+  cur.qty += it.quantity;
+  cur.revenue += it.line_total ?? 0;
+  prodMap.set(it.product_name, cur);
+}
+const topProducts = [...prodMap.entries()]
+  .sort((a, b) => b[1].qty - a[1].qty)
+  .slice(0, 10);
+---
+
+<AdminLayout title="Analytics" active="analytics">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Sales Analytics</h1>
+
+  <div class="mb-8 grid gap-4 sm:grid-cols-3">
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Total revenue</p>
+      <p class="mt-1 text-2xl font-bold text-brand-600">{formatMoney(totalRevenue, "INR")}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Paid orders</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{paidOrders.length}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Avg order value</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(avgOrder, "INR")}</p>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="card p-5">
+      <h2 class="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Revenue (last 6 months)</h2>
+      <div class="space-y-3">
+        {
+          months.map((m) => (
+            <div class="flex items-center gap-3 text-sm">
+              <span class="w-14 shrink-0 text-slate-500">{m.label}</span>
+              <div class="h-5 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                <div class="h-full rounded bg-brand-500" style={`width:${(m.revenue / maxRev) * 100}%`}></div>
+              </div>
+              <span class="w-24 shrink-0 text-right font-medium">{formatMoney(m.revenue, "INR")}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <h2 class="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Orders by status</h2>
+      <div class="space-y-2">
+        {
+          [...statusCounts.entries()].map(([s, c]) => (
+            <div class="flex items-center justify-between text-sm">
+              <span class="capitalize text-slate-600 dark:text-slate-300">{s}</span>
+              <span class="font-semibold">{c}</span>
+            </div>
+          ))
+        }
+        {statusCounts.size === 0 && <p class="text-sm text-slate-400">No orders yet.</p>}
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-6 card p-5">
+    <h2 class="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Top products</h2>
+    <table class="w-full text-sm">
+      <thead class="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800">
+        <tr>
+          <th class="p-2">Product</th>
+          <th class="p-2 text-right">Units sold</th>
+          <th class="p-2 text-right">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          topProducts.map(([name, s]) => (
+            <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
+              <td class="p-2 font-medium text-slate-900 dark:text-white">{name}</td>
+              <td class="p-2 text-right">{s.qty}</td>
+              <td class="p-2 text-right font-semibold">{formatMoney(s.revenue, "INR")}</td>
+            </tr>
+          ))
+        }
+        {topProducts.length === 0 && (
+          <tr><td colspan="3" class="p-6 text-center text-slate-400">No sales data yet.</td></tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

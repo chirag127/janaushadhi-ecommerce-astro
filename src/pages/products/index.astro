@@ -1,0 +1,129 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import ProductCard from "@components/ProductCard.astro";
+import Pagination from "@components/Pagination.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getProducts, getCategories, PAGE_SIZE } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import type { Currency } from "@lib/currency";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+
+const url = new URL(Astro.request.url);
+const params = url.searchParams;
+const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
+const categorySlug = params.get("category") ?? undefined;
+const sort = (params.get("sort") ?? "newest") as
+  | "newest"
+  | "price_asc"
+  | "price_desc"
+  | "name";
+const search = params.get("q") ?? undefined;
+const minPrice = params.get("min") ? Number(params.get("min")) : undefined;
+const maxPrice = params.get("max") ? Number(params.get("max")) : undefined;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const categories = await getCategories(insforge);
+const selectedCat = categorySlug
+  ? categories.find((c) => c.slug === categorySlug)
+  : undefined;
+
+const { products, total } = await getProducts(insforge, {
+  page,
+  categoryId: selectedCat?.id,
+  sort,
+  search,
+  minPrice,
+  maxPrice,
+});
+
+// baseUrl for pagination (preserve filters, drop page)
+const baseParams = new URLSearchParams(params);
+baseParams.delete("page");
+const baseUrl = `/products${baseParams.toString() ? "?" + baseParams.toString() : ""}`;
+
+const sortOptions = [
+  { value: "newest", label: "Newest" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "name", label: "Name (A-Z)" },
+];
+---
+
+<Layout title={t("nav.products")} description="Browse all generic medicines available at Jan Aushadhi prices.">
+  <Breadcrumbs items={[{ label: t("nav.products") }]} />
+
+  <div class="container-page grid gap-6 pb-12 lg:grid-cols-[260px_1fr]">
+    <!-- Filters sidebar -->
+    <aside class="lg:sticky lg:top-28 lg:self-start">
+      <form method="get" class="card space-y-5 p-5">
+        <div>
+          <h3 class="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t("common.category")}</h3>
+          <div class="max-h-64 space-y-1 overflow-y-auto pr-1">
+            <label class="flex items-center gap-2 text-sm">
+              <input type="radio" name="category" value="" checked={!categorySlug} />
+              <span>All Categories</span>
+            </label>
+            {
+              categories.map((c) => (
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="radio" name="category" value={c.slug} checked={categorySlug === c.slug} />
+                  <span class="line-clamp-1">{c.name}</span>
+                </label>
+              ))
+            }
+          </div>
+        </div>
+        <div>
+          <h3 class="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{t("common.price")} (₹)</h3>
+          <div class="flex items-center gap-2">
+            <input type="number" name="min" placeholder="Min" value={params.get("min") ?? ""} class="input !py-1.5 text-sm" min="0" />
+            <span class="text-slate-400">–</span>
+            <input type="number" name="max" placeholder="Max" value={params.get("max") ?? ""} class="input !py-1.5 text-sm" min="0" />
+          </div>
+        </div>
+        {search && <input type="hidden" name="q" value={search} />}
+        <input type="hidden" name="sort" value={sort} />
+        <button type="submit" class="btn-primary w-full text-sm">{t("common.filter")}</button>
+        <a href="/products" class="btn-ghost w-full text-sm">Reset</a>
+      </form>
+    </aside>
+
+    <!-- Results -->
+    <section>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">
+          {total} {total === 1 ? "product" : "products"}
+          {selectedCat && <> in <strong>{selectedCat.name}</strong></>}
+        </p>
+        <form method="get" class="flex items-center gap-2">
+          {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
+          {search && <input type="hidden" name="q" value={search} />}
+          {params.get("min") && <input type="hidden" name="min" value={params.get("min")} />}
+          {params.get("max") && <input type="hidden" name="max" value={params.get("max")} />}
+          <label class="text-sm text-slate-500">{t("common.sort")}:</label>
+          <select name="sort" onchange="this.form.submit()" class="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+            {sortOptions.map((o) => <option value={o.value} selected={sort === o.value}>{o.label}</option>)}
+          </select>
+        </form>
+      </div>
+
+      {
+        products.length === 0 ? (
+          <div class="card p-12 text-center text-slate-500">No products found. Try adjusting your filters.</div>
+        ) : (
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+            {products.map((p) => <ProductCard product={p} currency={currency} />)}
+          </div>
+        )
+      }
+
+      <Pagination page={page} total={total} pageSize={PAGE_SIZE} baseUrl={baseUrl} />
+    </section>
+  </div>
+</Layout>

@@ -1,0 +1,38 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getCategories } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const categories = await getCategories(insforge);
+---
+
+<Layout title={t("nav.categories")} description="Shop generic medicines by therapeutic category at Jan Aushadhi.">
+  <Breadcrumbs items={[{ label: t("nav.categories") }]} />
+  <div class="container-page pb-12">
+    <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">{t("home.categories")}</h1>
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        categories.map((c) => (
+          <a href={`/categories/${c.slug}`} class="card flex items-start gap-4 p-5 transition-shadow hover:shadow-md">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104c.251.023.501.05.75.082M19.8 14.3l-3.5-3.5m0 0a2.652 2.652 0 0 1 0-3.75l1.5-1.5m2 5.25L21 12" />
+              </svg>
+            </span>
+            <div>
+              <h2 class="font-semibold text-slate-900 dark:text-white">{c.name}</h2>
+              {c.description && <p class="mt-1 line-clamp-2 text-sm text-slate-500">{c.description}</p>}
+            </div>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</Layout>

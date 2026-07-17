@@ -1,0 +1,59 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import ProductCard from "@components/ProductCard.astro";
+import Pagination from "@components/Pagination.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getProducts, PAGE_SIZE } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import type { Currency } from "@lib/currency";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+
+const url = new URL(Astro.request.url);
+const q = (url.searchParams.get("q") ?? "").trim();
+const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const { products, total } = q
+  ? await getProducts(insforge, { search: q, page })
+  : { products: [], total: 0 };
+
+const baseUrl = `/search?q=${encodeURIComponent(q)}`;
+---
+
+<Layout title={q ? `Search: ${q}` : "Search"} noindex>
+  <Breadcrumbs items={[{ label: "Search" }]} />
+  <div class="container-page pb-12">
+    <form action="/search" method="get" class="mb-6 flex gap-2">
+      <input type="search" name="q" value={q} placeholder={t("nav.search")} class="input" autofocus />
+      <button type="submit" class="btn-primary">{t("common.search")}</button>
+    </form>
+
+    {
+      q ? (
+        <>
+          <p class="mb-4 text-sm text-slate-500">
+            {total} {total === 1 ? "result" : "results"} for <strong>“{q}”</strong>
+          </p>
+          {
+            products.length === 0 ? (
+              <div class="card p-12 text-center text-slate-500">No medicines matched your search.</div>
+            ) : (
+              <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                {products.map((p) => <ProductCard product={p} currency={currency} />)}
+              </div>
+            )
+          }
+          <Pagination page={page} total={total} pageSize={PAGE_SIZE} baseUrl={baseUrl} />
+        </>
+      ) : (
+        <p class="text-sm text-slate-500">Type a medicine name to search.</p>
+      )
+    }
+  </div>
+</Layout>

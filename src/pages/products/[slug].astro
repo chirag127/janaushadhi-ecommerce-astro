@@ -1,0 +1,205 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import ProductCard from "@components/ProductCard.astro";
+import StarRating from "@components/StarRating.astro";
+import AddToCartButton from "@components/react/AddToCartButton.tsx";
+import BuyNowButton from "@components/react/BuyNowButton.tsx";
+import WishlistButton from "@components/react/WishlistButton.tsx";
+import ReviewForm from "@components/react/ReviewForm.tsx";
+import { createInsForgeServer } from "@lib/insforge/server";
+import {
+  getProductBySlug,
+  getRelatedProducts,
+  getReviews,
+  averageRating,
+} from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import { formatMoney, type Currency } from "@lib/currency";
+import { discountPct, formatDate } from "@lib/utils";
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const product = await getProductBySlug(insforge, slug!);
+if (!product) return Astro.redirect("/404");
+
+const [related, reviews] = await Promise.all([
+  getRelatedProducts(insforge, product.category_id, product.id, 4),
+  getReviews(insforge, product.id),
+]);
+const avg = averageRating(reviews);
+const off = discountPct(product.mrp, product.price);
+const outOfStock = product.stock <= 0;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: product.name,
+  description: product.description,
+  sku: product.drug_code ?? product.id,
+  category: product.category?.name,
+  offers: {
+    "@type": "Offer",
+    price: product.price,
+    priceCurrency: "INR",
+    availability: outOfStock
+      ? "https://schema.org/OutOfStock"
+      : "https://schema.org/InStock",
+  },
+  ...(reviews.length
+    ? {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: avg,
+          reviewCount: reviews.length,
+        },
+      }
+    : {}),
+};
+---
+
+<Layout
+  title={product.name}
+  description={product.description ?? product.name}
+  type="product"
+  image={product.image_url ?? undefined}
+  jsonLd={jsonLd}
+>
+  <Breadcrumbs
+    items={[
+      { label: t("nav.products"), href: "/products" },
+      ...(product.category
+        ? [{ label: product.category.name, href: `/categories/${product.category.slug}` }]
+        : []),
+      { label: product.name },
+    ]}
+  />
+
+  <div class="container-page grid gap-8 pb-12 md:grid-cols-2">
+    <!-- Image -->
+    <div class="card relative flex aspect-square items-center justify-center overflow-hidden bg-slate-50 p-8 dark:bg-slate-800">
+      {
+        product.image_url ? (
+          <img src={product.image_url} alt={product.name} class="max-h-full max-w-full object-contain" />
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 text-brand-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m10.5 20.25 7.5-7.5a3.75 3.75 0 1 0-5.303-5.303l-8.485 8.485a2.5 2.5 0 0 0 3.536 3.536l7.07-7.07" />
+          </svg>
+        )
+      }
+      <div class="absolute right-4 top-4">
+        <WishlistButton client:visible productId={product.id} />
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div>
+      {product.category && (
+        <a href={`/categories/${product.category.slug}`} class="text-sm font-medium text-brand-600 dark:text-brand-400">
+          {product.category.name}
+        </a>
+      )}
+      <h1 class="mb-2 mt-1 text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
+        {product.name}
+      </h1>
+
+      <div class="mb-4 flex items-center gap-3">
+        {reviews.length > 0 && <StarRating rating={avg} count={reviews.length} />}
+        <span class={`badge ${outOfStock ? "bg-rose-100 text-rose-700" : "bg-brand-100 text-brand-700"}`}>
+          {outOfStock ? t("product.outOfStock") : t("product.inStock")}
+        </span>
+      </div>
+
+      <div class="mb-6 flex items-baseline gap-3">
+        <span class="text-3xl font-extrabold text-slate-900 dark:text-white">
+          {formatMoney(product.price, currency)}
+        </span>
+        {off > 0 && (
+          <>
+            <span class="text-lg text-slate-400 line-through">{formatMoney(product.mrp, currency)}</span>
+            <span class="badge bg-brand-600 text-white">{off}% {t("product.save")}</span>
+          </>
+        )}
+      </div>
+
+      <dl class="mb-6 grid grid-cols-2 gap-3 text-sm">
+        {product.unit_size && (
+          <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+            <dt class="text-slate-500">{t("product.unitSize")}</dt>
+            <dd class="font-medium text-slate-900 dark:text-white">{product.unit_size}</dd>
+          </div>
+        )}
+        {product.drug_code && (
+          <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800">
+            <dt class="text-slate-500">{t("product.drugCode")}</dt>
+            <dd class="font-medium text-slate-900 dark:text-white">{product.drug_code}</dd>
+          </div>
+        )}
+      </dl>
+
+      <div class="mb-6 flex gap-3">
+        <AddToCartButton client:visible productId={product.id} disabled={outOfStock} label={outOfStock ? t("product.outOfStock") : t("product.addToCart")} className="btn-primary flex-1" />
+        <div class="flex-1">
+          <BuyNowButton client:visible productId={product.id} disabled={outOfStock} />
+        </div>
+      </div>
+
+      {product.description && (
+        <div class="prose prose-sm max-w-none text-slate-600 dark:text-slate-300">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-white">Description</h2>
+          <p>{product.description}</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Reviews -->
+  <section class="container-page pb-12">
+    <h2 class="mb-4 text-xl font-bold text-slate-900 dark:text-white">
+      {t("product.reviews")} ({reviews.length})
+    </h2>
+    <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div class="space-y-4">
+        {
+          reviews.length === 0 ? (
+            <p class="text-sm text-slate-500">No reviews yet. Be the first to review!</p>
+          ) : (
+            reviews.map((r) => (
+              <div class="card p-4">
+                <div class="mb-1 flex items-center justify-between">
+                  <StarRating rating={r.rating} />
+                  <span class="text-xs text-slate-400">{formatDate(r.created_at)}</span>
+                </div>
+                {r.title && <p class="font-semibold text-slate-900 dark:text-white">{r.title}</p>}
+                {r.comment && <p class="text-sm text-slate-600 dark:text-slate-300">{r.comment}</p>}
+                <p class="mt-1 text-xs text-slate-400">— {r.profile?.full_name || "Verified Buyer"}</p>
+              </div>
+            ))
+          )
+        }
+      </div>
+      <div>
+        <h3 class="mb-3 font-semibold text-slate-900 dark:text-white">{t("product.writeReview")}</h3>
+        <ReviewForm client:visible productId={product.id} isLoggedIn={Boolean(Astro.locals.user)} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Related -->
+  {
+    related.length > 0 && (
+      <section class="container-page pb-16">
+        <h2 class="mb-6 text-xl font-bold text-slate-900 dark:text-white">{t("product.related")}</h2>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {related.map((p) => <ProductCard product={p} currency={currency} />)}
+        </div>
+      </section>
+    )
+  }
+</Layout>

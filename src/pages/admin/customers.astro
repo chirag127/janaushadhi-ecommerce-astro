@@ -1,0 +1,94 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { formatDate } from "@lib/utils";
+import { formatMoney } from "@lib/currency";
+
+export const prerender = false;
+
+interface Profile {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  role: string;
+  created_at: string;
+}
+interface OrderLite {
+  user_id: string | null;
+  total: number;
+  status: string;
+}
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+
+const { data: profData } = await insforge.database
+  .from("profiles")
+  .select("id, full_name, phone, role, created_at")
+  .order("created_at", { ascending: false })
+  .limit(500);
+const profiles = (profData as Profile[]) ?? [];
+
+// Aggregate orders per customer (revenue-bearing statuses).
+const { data: ordData } = await insforge.database
+  .from("orders")
+  .select("user_id, total, status")
+  .limit(1000);
+const orders = (ordData as OrderLite[]) ?? [];
+const revenueStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
+const byUser = new Map<string, { count: number; spent: number }>();
+for (const o of orders) {
+  if (!o.user_id) continue;
+  const cur = byUser.get(o.user_id) ?? { count: 0, spent: 0 };
+  cur.count += 1;
+  if (revenueStatuses.has(o.status)) cur.spent += o.total ?? 0;
+  byUser.set(o.user_id, cur);
+}
+---
+
+<AdminLayout title="Customers" active="customers">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Customers</h1>
+    <span class="text-sm text-slate-500">{profiles.length} registered</span>
+  </div>
+
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800">
+        <tr>
+          <th class="p-3">Name</th>
+          <th class="p-3">Phone</th>
+          <th class="p-3">Role</th>
+          <th class="p-3">Joined</th>
+          <th class="p-3 text-right">Orders</th>
+          <th class="p-3 text-right">Spent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          profiles.map((p) => {
+            const stats = byUser.get(p.id) ?? { count: 0, spent: 0 };
+            return (
+              <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
+                <td class="p-3 font-medium text-slate-900 dark:text-white">{p.full_name || "—"}</td>
+                <td class="p-3 text-slate-500">{p.phone || "—"}</td>
+                <td class="p-3">
+                  {p.role === "admin" ? (
+                    <span class="badge bg-brand-50 text-brand-700">admin</span>
+                  ) : (
+                    <span class="badge bg-slate-100 text-slate-500">customer</span>
+                  )}
+                </td>
+                <td class="p-3 text-slate-500">{formatDate(p.created_at)}</td>
+                <td class="p-3 text-right">{stats.count}</td>
+                <td class="p-3 text-right font-semibold">{formatMoney(stats.spent, "INR")}</td>
+              </tr>
+            );
+          })
+        }
+        {profiles.length === 0 && (
+          <tr><td colspan="6" class="p-6 text-center text-slate-400">No customers yet.</td></tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

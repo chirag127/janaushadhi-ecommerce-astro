@@ -1,0 +1,92 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { formatMoney } from "@lib/currency";
+import type { Product } from "@lib/types";
+
+export const prerender = false;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+
+// Low stock first, then out of stock highlighted.
+const { data: lowData } = await insforge.database
+  .from("products")
+  .select("id, name, drug_code, price, stock, is_active")
+  .lte("stock", 10)
+  .order("stock", { ascending: true })
+  .limit(200);
+const low = (lowData as Product[]) ?? [];
+
+const { count: totalProducts } = await insforge.database
+  .from("products")
+  .select("id", { count: "exact" })
+  .limit(1);
+const { count: outOfStock } = await insforge.database
+  .from("products")
+  .select("id", { count: "exact" })
+  .eq("stock", 0)
+  .limit(1);
+
+const inventoryValue = low.reduce((s, p) => s + p.price * p.stock, 0);
+---
+
+<AdminLayout title="Inventory" active="inventory">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Inventory</h1>
+
+  <div class="mb-6 grid gap-4 sm:grid-cols-3">
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Total products</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{totalProducts ?? 0}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Out of stock</p>
+      <p class={`mt-1 text-2xl font-bold ${(outOfStock ?? 0) > 0 ? "text-rose-600" : "text-slate-900 dark:text-white"}`}>{outOfStock ?? 0}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-sm text-slate-500">Low-stock (≤10) value</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{formatMoney(inventoryValue, "INR")}</p>
+    </div>
+  </div>
+
+  <h2 class="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Low stock (≤10 units)</h2>
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800">
+        <tr>
+          <th class="p-3">Product</th>
+          <th class="p-3 text-right">Price</th>
+          <th class="p-3 text-right">Stock</th>
+          <th class="p-3">Status</th>
+          <th class="p-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          low.map((p) => (
+            <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
+              <td class="p-3">
+                <span class="font-medium text-slate-900 dark:text-white">{p.name}</span>
+                {p.drug_code && <span class="ml-2 text-xs text-slate-400">#{p.drug_code}</span>}
+              </td>
+              <td class="p-3 text-right">{formatMoney(p.price, "INR")}</td>
+              <td class={`p-3 text-right font-semibold ${p.stock === 0 ? "text-rose-600" : "text-amber-600"}`}>{p.stock}</td>
+              <td class="p-3">
+                {p.stock === 0 ? (
+                  <span class="badge bg-rose-50 text-rose-700">out of stock</span>
+                ) : (
+                  <span class="badge bg-amber-50 text-amber-700">low</span>
+                )}
+              </td>
+              <td class="p-3 text-right">
+                <a href="/admin/products" class="text-brand-600 hover:underline">Restock →</a>
+              </td>
+            </tr>
+          ))
+        }
+        {low.length === 0 && (
+          <tr><td colspan="5" class="p-6 text-center text-slate-400">All products are well stocked.</td></tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

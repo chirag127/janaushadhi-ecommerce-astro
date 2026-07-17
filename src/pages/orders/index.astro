@@ -1,0 +1,62 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { useTranslations, type Locale } from "@lib/i18n";
+import { formatMoney, type Currency } from "@lib/currency";
+import { formatDate } from "@lib/utils";
+import type { Order } from "@lib/types";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const currency = (Astro.locals.currency ?? "INR") as Currency;
+const t = useTranslations(locale);
+const user = Astro.locals.user!;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const { data } = await insforge.database
+  .from("orders")
+  .select("*")
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false });
+const orders = (data as Order[]) ?? [];
+
+const statusColor: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  paid: "bg-brand-100 text-brand-700",
+  processing: "bg-blue-100 text-blue-700",
+  shipped: "bg-indigo-100 text-indigo-700",
+  delivered: "bg-green-100 text-green-700",
+  cancelled: "bg-rose-100 text-rose-700",
+  refunded: "bg-slate-200 text-slate-700",
+};
+---
+
+<Layout title={t("nav.orders")} noindex>
+  <Breadcrumbs items={[{ label: t("nav.orders") }]} />
+  <div class="container-page pb-12">
+    <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">{t("nav.orders")}</h1>
+    {
+      orders.length === 0 ? (
+        <div class="card p-12 text-center">
+          <p class="mb-4 text-slate-500">You have no orders yet.</p>
+          <a href="/products" class="btn-primary">Start Shopping</a>
+        </div>
+      ) : (
+        <div class="space-y-3">
+          {orders.map((o) => (
+            <a href={`/orders/${o.id}`} class="card flex flex-wrap items-center justify-between gap-3 p-4 transition-shadow hover:shadow-md">
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">{o.order_number}</p>
+                <p class="text-xs text-slate-500">{formatDate(o.created_at)}</p>
+              </div>
+              <span class={`badge ${statusColor[o.status] ?? "bg-slate-100 text-slate-700"}`}>{o.status}</span>
+              <span class="font-bold text-slate-900 dark:text-white">{formatMoney(o.total, currency)}</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Layout>

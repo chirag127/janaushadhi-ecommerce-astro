@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /account
+Disallow: /orders
+Disallow: /checkout
+Disallow: /api
+
+Sitemap: https://janaushadhi.pages.dev/sitemap-index.xml

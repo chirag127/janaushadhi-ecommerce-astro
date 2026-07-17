@@ -1,0 +1,62 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  type?: "website" | "article" | "product";
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description = "Buy quality generic medicines online at Jan Aushadhi prices. Save up to 90% on medicines with the same efficacy as branded alternatives.",
+  image,
+  canonical,
+  type = "website",
+  noindex = false,
+  jsonLd,
+} = Astro.props;
+
+const siteName = "Jan Aushadhi Store";
+const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+const canonicalURL = new URL(
+  canonical ?? Astro.url.pathname,
+  Astro.site ?? Astro.url.origin,
+).toString();
+const ogImage = image
+  ? new URL(image, Astro.site ?? Astro.url.origin).toString()
+  : undefined;
+const jsonLdArray = jsonLd
+  ? Array.isArray(jsonLd)
+    ? jsonLd
+    : [jsonLd]
+  : [];
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+{noindex && <meta name="robots" content="noindex,nofollow" />}
+
+<meta property="og:site_name" content={siteName} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalURL} />
+{ogImage && <meta property="og:image" content={ogImage} />}
+
+<meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+
+{
+  jsonLdArray.map((data) => (
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(data)}
+    />
+  ))
+}

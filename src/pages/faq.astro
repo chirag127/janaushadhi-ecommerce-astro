@@ -1,0 +1,106 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { useTranslations, type Locale } from "@lib/i18n";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+
+const faqs = [
+  {
+    q: "What are Jan Aushadhi generic medicines?",
+    a: "Jan Aushadhi generic medicines are the same as branded medicines in terms of salt composition, dosage, and efficacy. They are manufactured by reputed pharmaceutical companies and are available at prices up to 90% lower than branded equivalents. The Pradhan Mantri Bhartiya Janaushadhi Pariyojana (PMBJP) initiative by the Government of India ensures quality generic medicines are accessible to all.",
+  },
+  {
+    q: "Are generic medicines safe and effective?",
+    a: "Yes. Generic medicines contain the same active pharmaceutical ingredient (API) as the branded version, in the same dose and dosage form. They meet the same regulatory quality standards set by the Central Drugs Standard Control Organisation (CDSCO). All Jan Aushadhi products are tested in NABL-accredited laboratories before distribution.",
+  },
+  {
+    q: "How do I place an order?",
+    a: "Browse our products or categories, add items to your cart, and proceed to checkout. You can pay online (credit/debit card, UPI, net banking via Razorpay) or choose Cash on Delivery (COD) where available. You will receive an order confirmation email once your order is placed.",
+  },
+  {
+    q: "What payment methods are accepted?",
+    a: "We accept all major payment methods through Razorpay: credit cards, debit cards, net banking, UPI (Google Pay, PhonePe, Paytm), and wallets. Cash on Delivery (COD) is also available for eligible pin codes.",
+  },
+  {
+    q: "How long does delivery take?",
+    a: "Standard delivery takes 4–7 business days across India. Metro cities may receive orders in 2–4 business days. Express delivery options may be available at checkout for select pin codes. You will receive a tracking link once your order is shipped.",
+  },
+  {
+    q: "Is there a minimum order value or shipping charge?",
+    a: "Shipping is free on orders above ₹500. A flat shipping fee of ₹40 applies to orders below ₹500. There is no minimum order value.",
+  },
+  {
+    q: "What is the return and refund policy?",
+    a: "We accept returns within 7 days of delivery for damaged, defective, or incorrect products. Medicines that have been opened or used cannot be returned. To initiate a return, contact us at support@janaushadhi.store with your order number and photos of the issue. Refunds are processed to the original payment method within 5–7 business days.",
+  },
+  {
+    q: "Do I need a prescription to order medicines?",
+    a: "Schedule H and Schedule H1 prescription medicines require a valid doctor's prescription. You will be prompted to upload your prescription during checkout for such products. Over-the-counter (OTC) and general wellness products can be purchased without a prescription.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: a,
+    },
+  })),
+};
+---
+
+<Layout
+  title={t("nav.faq")}
+  description="Frequently asked questions about Jan Aushadhi generic medicines, ordering, shipping, payments, returns, and more."
+  jsonLd={faqJsonLd}
+>
+  <Breadcrumbs items={[{ label: t("nav.faq") }]} />
+
+  <div class="container-page pb-16">
+    <h1 class="mb-2 text-2xl font-bold text-slate-900 dark:text-white">{t("nav.faq")}</h1>
+    <p class="mb-8 text-slate-500 dark:text-slate-400">
+      Everything you need to know about Jan Aushadhi generic medicines, ordering, and delivery.
+    </p>
+
+    <div class="mx-auto max-w-2xl space-y-3">
+      {
+        faqs.map(({ q, a }) => (
+          <details class="group card overflow-hidden">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 font-medium text-slate-900 marker:content-none hover:text-brand-600 dark:text-white dark:hover:text-brand-400">
+              <span>{q}</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 group-open:rotate-180"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19 9-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="border-t border-slate-100 px-5 pb-5 pt-3 text-sm leading-relaxed text-slate-600 dark:border-slate-700 dark:text-slate-400">
+              {a}
+            </div>
+          </details>
+        ))
+      }
+    </div>
+
+    <div class="mt-10 text-center text-sm text-slate-500 dark:text-slate-400">
+      Still have questions?{" "}
+      <a href="/contact" class="font-medium text-brand-600 hover:underline dark:text-brand-400">
+        Contact us
+      </a>
+      .
+    </div>
+  </div>
+</Layout>

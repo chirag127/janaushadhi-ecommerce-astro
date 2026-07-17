@@ -1,0 +1,120 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { formatMoney } from "@lib/currency";
+import { formatDate } from "@lib/utils";
+import type { Order } from "@lib/types";
+
+export const prerender = false;
+
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+
+// Counts via exact count (select minimal column, we ignore the rows).
+async function count(table: string, filter?: (q: any) => any): Promise<number> {
+  let q = insforge.database.from(table).select("id", { count: "exact" }).limit(1);
+  if (filter) q = filter(q);
+  const { count: c } = await q;
+  return c ?? 0;
+}
+
+const [productCount, categoryCount, orderCount, customerCount, lowStock] =
+  await Promise.all([
+    count("products"),
+    count("categories"),
+    count("orders"),
+    count("profiles"),
+    count("products", (q) => q.lte("stock", 5).eq("is_active", true)),
+  ]);
+
+// Recent orders + revenue (paid/processing/shipped/delivered count toward revenue).
+const { data: ordersData } = await insforge.database
+  .from("orders")
+  .select("*")
+  .order("created_at", { ascending: false })
+  .limit(200);
+const orders = (ordersData as Order[]) ?? [];
+const revenueStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
+const revenue = orders
+  .filter((o) => revenueStatuses.has(o.status))
+  .reduce((s, o) => s + (o.total ?? 0), 0);
+const pendingCount = orders.filter((o) => o.status === "pending").length;
+const recent = orders.slice(0, 8);
+
+const stats = [
+  { label: "Revenue (recent)", value: formatMoney(revenue, "INR"), tone: "brand" },
+  { label: "Orders", value: String(orderCount), tone: "slate" },
+  { label: "Products", value: String(productCount), tone: "slate" },
+  { label: "Customers", value: String(customerCount), tone: "slate" },
+  { label: "Categories", value: String(categoryCount), tone: "slate" },
+  { label: "Low stock (≤5)", value: String(lowStock), tone: lowStock > 0 ? "amber" : "slate" },
+  { label: "Pending orders", value: String(pendingCount), tone: pendingCount > 0 ? "amber" : "slate" },
+];
+---
+
+<AdminLayout title="Dashboard" active="dashboard">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {
+      stats.map((s) => (
+        <div class="card p-5">
+          <p class="text-sm text-slate-500">{s.label}</p>
+          <p
+            class={`mt-1 text-2xl font-bold ${
+              s.tone === "brand"
+                ? "text-brand-600"
+                : s.tone === "amber"
+                  ? "text-amber-600"
+                  : "text-slate-900 dark:text-white"
+            }`}
+          >
+            {s.value}
+          </p>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="mt-8">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
+      <a href="/admin/orders" class="text-sm text-brand-600 hover:underline">View all →</a>
+    </div>
+    <div class="card overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800">
+          <tr>
+            <th class="p-3">Order</th>
+            <th class="p-3">Date</th>
+            <th class="p-3">Status</th>
+            <th class="p-3">Payment</th>
+            <th class="p-3 text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            recent.map((o) => (
+              <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
+                <td class="p-3 font-medium">{o.order_number}</td>
+                <td class="p-3 text-slate-500">{formatDate(o.created_at)}</td>
+                <td class="p-3 capitalize">{o.status}</td>
+                <td class="p-3 capitalize text-slate-500">{o.payment_status}</td>
+                <td class="p-3 text-right font-semibold">{formatMoney(o.total, "INR")}</td>
+              </tr>
+            ))
+          }
+          {recent.length === 0 && (
+            <tr><td colspan="5" class="p-6 text-center text-slate-400">No orders yet.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <a href="/admin/products" class="card p-4 hover:border-brand-400">+ Add / edit products</a>
+    <a href="/admin/categories" class="card p-4 hover:border-brand-400">Manage categories</a>
+    <a href="/admin/coupons" class="card p-4 hover:border-brand-400">Create coupons</a>
+    <a href="/admin/analytics" class="card p-4 hover:border-brand-400">Sales analytics</a>
+  </div>
+</AdminLayout>

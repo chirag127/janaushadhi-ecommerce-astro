@@ -1,0 +1,67 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { createInsForgeServer } from "@lib/insforge/server";
+import { getBlogPosts } from "@lib/queries";
+import { useTranslations, type Locale } from "@lib/i18n";
+import { formatDate } from "@lib/utils";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const posts = await getBlogPosts(insforge, 50);
+---
+
+<Layout
+  title={t("nav.blog")}
+  description="Read the latest articles on generic medicines, health tips, and Jan Aushadhi news."
+>
+  <Breadcrumbs items={[{ label: t("nav.blog") }]} />
+  <div class="container-page pb-12">
+    <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">{t("nav.blog")}</h1>
+
+    {
+      posts.length === 0 ? (
+        <div class="rounded-xl border border-slate-200 bg-white px-8 py-16 text-center dark:border-slate-700 dark:bg-slate-900">
+          <p class="text-slate-500 dark:text-slate-400">No blog posts yet. Check back soon!</p>
+        </div>
+      ) : (
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {posts.map((post) => (
+            <a
+              href={`/blog/${post.slug}`}
+              class="card group flex flex-col overflow-hidden transition-shadow hover:shadow-md"
+            >
+              {post.cover_image_url && (
+                <div class="aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  <img
+                    src={post.cover_image_url}
+                    alt={post.title}
+                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+              <div class="flex flex-1 flex-col gap-2 p-5">
+                <h2 class="line-clamp-2 font-semibold text-slate-900 group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
+                  {post.title}
+                </h2>
+                {post.excerpt && (
+                  <p class="line-clamp-3 flex-1 text-sm text-slate-500 dark:text-slate-400">
+                    {post.excerpt}
+                  </p>
+                )}
+                <div class="mt-auto flex items-center justify-between pt-2 text-xs text-slate-400">
+                  <span>{post.author}</span>
+                  {post.published_at && <span>{formatDate(post.published_at)}</span>}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Layout>

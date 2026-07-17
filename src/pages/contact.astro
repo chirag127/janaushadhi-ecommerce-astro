@@ -1,0 +1,218 @@
+---
+import Layout from "@layouts/Layout.astro";
+import Breadcrumbs from "@components/Breadcrumbs.astro";
+import { useTranslations, type Locale } from "@lib/i18n";
+
+export const prerender = false;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+---
+
+<Layout
+  title={t("nav.contact")}
+  description="Get in touch with Jan Aushadhi Store. We're here to help with orders, medicines, and any questions you may have."
+>
+  <Breadcrumbs items={[{ label: t("nav.contact") }]} />
+
+  <div class="container-page pb-16">
+    <h1 class="mb-2 text-2xl font-bold text-slate-900 dark:text-white">{t("nav.contact")}</h1>
+    <p class="mb-10 text-slate-500 dark:text-slate-400">
+      Have a question or need help? Fill in the form and we'll get back to you within 1 business day.
+    </p>
+
+    <div class="grid gap-10 lg:grid-cols-2">
+      <!-- Contact form -->
+      <div class="card p-6">
+        <h2 class="mb-5 text-lg font-semibold text-slate-900 dark:text-white">Send us a message</h2>
+
+        <!-- Success / error banners (hidden by default, shown by JS) -->
+        <div
+          id="contact-success"
+          class="mb-4 hidden rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300"
+        >
+          Thank you! Your message has been received. We'll respond within 1 business day.
+        </div>
+        <div
+          id="contact-error"
+          class="mb-4 hidden rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+        >
+          Something went wrong. Please try again or email us directly.
+        </div>
+
+        <form id="contact-form" novalidate class="space-y-4">
+          <div>
+            <label for="contact-name" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Name <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              required
+              autocomplete="name"
+              placeholder="Your full name"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-900"
+            />
+          </div>
+
+          <div>
+            <label for="contact-email" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Email <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="you@example.com"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-900"
+            />
+          </div>
+
+          <div>
+            <label for="contact-subject" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Subject
+            </label>
+            <input
+              id="contact-subject"
+              name="subject"
+              type="text"
+              placeholder="e.g. Order issue, Medicine query…"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-900"
+            />
+          </div>
+
+          <div>
+            <label for="contact-message" class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Message <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows={5}
+              required
+              placeholder="Tell us how we can help…"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-900"
+            ></textarea>
+          </div>
+
+          <button
+            type="submit"
+            id="contact-submit"
+            class="btn-primary w-full py-2.5 text-sm font-semibold"
+          >
+            Send Message
+          </button>
+        </form>
+      </div>
+
+      <!-- Store info -->
+      <div class="space-y-6">
+        <div class="card p-6">
+          <h2 class="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Store Information</h2>
+          <dl class="space-y-4 text-sm">
+            <div class="flex gap-3">
+              <dt class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-5 w-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                </svg>
+              </dt>
+              <dd class="text-slate-600 dark:text-slate-400">
+                <span class="font-medium text-slate-800 dark:text-slate-200">Jan Aushadhi Store</span><br />
+                Pradhan Mantri Bhartiya Janaushadhi Pariyojana<br />
+                Bureau of Pharma PSUs of India (BPPI)<br />
+                India
+              </dd>
+            </div>
+
+            <div class="flex gap-3">
+              <dt class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-5 w-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
+              </dt>
+              <dd class="text-slate-600 dark:text-slate-400">
+                <a href="mailto:support@janaushadhi.store" class="text-brand-600 hover:underline dark:text-brand-400">
+                  support@janaushadhi.store
+                </a>
+              </dd>
+            </div>
+
+            <div class="flex gap-3">
+              <dt class="shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5 h-5 w-5 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 6z" />
+                </svg>
+              </dt>
+              <dd class="text-slate-600 dark:text-slate-400">
+                Toll-free: <a href="tel:18001800" class="text-brand-600 hover:underline dark:text-brand-400">1800-180-8080</a>
+                <br />
+                <span class="text-xs text-slate-400">Mon–Sat, 9 AM – 6 PM IST</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="card p-6">
+          <h3 class="mb-2 font-semibold text-slate-900 dark:text-white">About Jan Aushadhi</h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Pradhan Mantri Bhartiya Janaushadhi Pariyojana (PMBJP) provides quality generic medicines at
+            affordable prices through dedicated Janaushadhi Kendras across India — the same efficacy
+            at up to 90% lower cost than branded alternatives.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const form = document.getElementById("contact-form") as HTMLFormElement | null;
+  const submitBtn = document.getElementById("contact-submit") as HTMLButtonElement | null;
+  const successBanner = document.getElementById("contact-success") as HTMLElement | null;
+  const errorBanner = document.getElementById("contact-error") as HTMLElement | null;
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!form || !submitBtn) return;
+
+    const data = new FormData(form);
+    const payload = {
+      name: (data.get("name") as string) ?? "",
+      email: (data.get("email") as string) ?? "",
+      subject: (data.get("subject") as string) || undefined,
+      message: (data.get("message") as string) ?? "",
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending…";
+    successBanner?.classList.add("hidden");
+    errorBanner?.classList.add("hidden");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json() as { ok?: boolean; error?: string };
+      if (res.ok && json.ok) {
+        form.reset();
+        successBanner?.classList.remove("hidden");
+      } else {
+        if (errorBanner) {
+          errorBanner.textContent = json.error ?? "Something went wrong. Please try again.";
+        }
+        errorBanner?.classList.remove("hidden");
+      }
+    } catch {
+      errorBanner?.classList.remove("hidden");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send Message";
+    }
+  });
+</script>

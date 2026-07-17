@@ -1,0 +1,45 @@
+---
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+export interface Props {
+  items: Crumb[];
+}
+const { items } = Astro.props;
+const site = Astro.site ?? new URL(Astro.url.origin);
+const all: Crumb[] = [{ label: "Home", href: "/" }, ...items];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: all.map((c, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    name: c.label,
+    ...(c.href ? { item: new URL(c.href, site).toString() } : {}),
+  })),
+};
+---
+
+<nav aria-label="Breadcrumb" class="container-page py-3">
+  <ol class="flex flex-wrap items-center gap-1.5 text-sm text-slate-500">
+    {
+      all.map((c, i) => (
+        <li class="flex items-center gap-1.5">
+          {c.href && i < all.length - 1 ? (
+            <a href={c.href} class="hover:text-brand-600">
+              {c.label}
+            </a>
+          ) : (
+            <span class="font-medium text-slate-700 dark:text-slate-300" aria-current="page">
+              {c.label}
+            </span>
+          )}
+          {i < all.length - 1 && <span class="text-slate-300">/</span>}
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />

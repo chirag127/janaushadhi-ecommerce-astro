@@ -1,0 +1,65 @@
+---
+export interface Props {
+  page: number;
+  total: number;
+  pageSize: number;
+  baseUrl: string; // path incl. existing query string minus `page`
+}
+const { page, total, pageSize, baseUrl } = Astro.props;
+const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+function urlFor(p: number) {
+  const sep = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${sep}page=${p}`;
+}
+
+const windowSize = 2;
+const start = Math.max(1, page - windowSize);
+const end = Math.min(totalPages, page + windowSize);
+const pages: number[] = [];
+for (let i = start; i <= end; i++) pages.push(i);
+---
+
+{
+  totalPages > 1 && (
+    <nav aria-label="Pagination" class="flex items-center justify-center gap-1 py-8">
+      {page > 1 && (
+        <a href={urlFor(page - 1)} class="btn-secondary !px-3 !py-2 text-sm">
+          Prev
+        </a>
+      )}
+      {start > 1 && (
+        <>
+          <a href={urlFor(1)} class="btn-ghost !px-3 !py-2 text-sm">1</a>
+          {start > 2 && <span class="px-1 text-slate-400">…</span>}
+        </>
+      )}
+      {pages.map((p) => (
+        <a
+          href={urlFor(p)}
+          aria-current={p === page ? "page" : undefined}
+          class={
+            p === page
+              ? "btn-primary !px-3 !py-2 text-sm"
+              : "btn-ghost !px-3 !py-2 text-sm"
+          }
+        >
+          {p}
+        </a>
+      ))}
+      {end < totalPages && (
+        <>
+          {end < totalPages - 1 && <span class="px-1 text-slate-400">…</span>}
+          <a href={urlFor(totalPages)} class="btn-ghost !px-3 !py-2 text-sm">
+            {totalPages}
+          </a>
+        </>
+      )}
+      {page < totalPages && (
+        <a href={urlFor(page + 1)} class="btn-secondary !px-3 !py-2 text-sm">
+          Next
+        </a>
+      )}
+    </nav>
+  )
+}

@@ -1,0 +1,10 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import CouponAdmin from "@components/react/admin/CouponAdmin.tsx";
+export const prerender = false;
+---
+
+<AdminLayout title="Coupons" active="coupons">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Coupons</h1>
+  <CouponAdmin client:only="react" />
+</AdminLayout>

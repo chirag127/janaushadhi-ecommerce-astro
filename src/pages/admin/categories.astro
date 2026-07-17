@@ -1,0 +1,10 @@
+---
+import AdminLayout from "@layouts/AdminLayout.astro";
+import CategoryAdmin from "@components/react/admin/CategoryAdmin.tsx";
+export const prerender = false;
+---
+
+<AdminLayout title="Categories" active="categories">
+  <h1 class="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Categories</h1>
+  <CategoryAdmin client:only="react" />
+</AdminLayout>

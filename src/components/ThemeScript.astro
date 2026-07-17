@@ -1,0 +1,19 @@
+---
+// Inline, render-blocking theme init to avoid FOUC.
+// Reads persisted theme from localStorage (nanostores persistent key).
+---
+<script is:inline>
+  (function () {
+    try {
+      var key = "ja:theme";
+      var stored = localStorage.getItem(key);
+      var theme = stored ? stored.replace(/"/g, "") : null;
+      if (!theme) {
+        theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
+      if (theme === "dark") document.documentElement.classList.add("dark");
+    } catch (e) {}
+  })();
+</script>

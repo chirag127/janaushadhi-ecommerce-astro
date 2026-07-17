@@ -1,0 +1,28 @@
+---
+import Layout from "@layouts/Layout.astro";
+import AuthForm from "@components/react/AuthForm.tsx";
+import { useTranslations, type Locale } from "@lib/i18n";
+
+export const prerender = false;
+
+if (Astro.locals.user) return Astro.redirect("/account");
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const t = useTranslations(locale);
+const next = new URL(Astro.request.url).searchParams.get("next") ?? "/";
+---
+
+<Layout title={t("auth.register.title")} noindex>
+  <div class="container-page flex min-h-[70vh] items-center justify-center py-12">
+    <div class="card w-full max-w-md p-8">
+      <a href="/" class="mb-6 flex items-center justify-center gap-2">
+        <span class="grid h-10 w-10 place-items-center rounded-lg bg-brand-600 text-white font-bold">JA</span>
+      </a>
+      <h1 class="mb-6 text-center text-2xl font-bold text-slate-900 dark:text-white">{t("auth.register.title")}</h1>
+      <AuthForm client:load mode="register" next={next} />
+      <p class="mt-6 text-center text-sm text-slate-500">
+        {t("auth.haveAccount")}{" "}
+        <a href={`/login${next !== "/" ? `?next=${encodeURIComponent(next)}` : ""}`} class="link">{t("nav.login")}</a>
+      </p>
+    </div>
+  </div>
+</Layout>

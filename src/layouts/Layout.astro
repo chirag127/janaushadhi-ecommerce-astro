@@ -1,0 +1,70 @@
+---
+import "../styles/global.css";
+import Seo from "@components/Seo.astro";
+import ThemeScript from "@components/ThemeScript.astro";
+import Header from "@components/Header.astro";
+import Footer from "@components/Footer.astro";
+import type { Locale } from "@lib/i18n";
+
+export interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  type?: "website" | "article" | "product";
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  hideChrome?: boolean;
+}
+
+const {
+  title,
+  description,
+  image,
+  canonical,
+  type,
+  noindex,
+  jsonLd,
+  hideChrome = false,
+} = Astro.props;
+
+const locale = (Astro.locals.locale ?? "en") as Locale;
+const userId = Astro.locals.user?.id ?? "";
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c8365" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://checkout.razorpay.com" />
+    <ThemeScript />
+    <Seo
+      title={title}
+      description={description}
+      image={image}
+      canonical={canonical}
+      type={type}
+      noindex={noindex}
+      jsonLd={jsonLd}
+    />
+  </head>
+  <body class="flex min-h-screen flex-col">
+    {!hideChrome && <Header />}
+    <main class="flex-1">
+      <slot />
+    </main>
+    {!hideChrome && <Footer />}
+
+    <script is:inline define:vars={{ userId }}>
+      // Expose signed-in user id to nanostores-backed React islands.
+      window.__JA_USER_ID__ = userId || null;
+    </script>
+    <script>
+      import { $userId } from "@lib/stores";
+      $userId.set(window.__JA_USER_ID__ ?? null);
+    </script>
+  </body>
+</html>

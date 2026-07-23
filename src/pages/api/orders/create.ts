@@ -61,6 +61,9 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     if (!p || !p.is_active) {
       return json({ error: `Product unavailable: ${item.productId}` }, 400);
     }
+    if (!p.price || p.price <= 0) {
+      return json({ error: `${p.name} is available on request only — contact us to order.` }, 400);
+    }
     const qty = Math.max(1, Math.min(item.quantity, p.stock || 1));
     if (p.stock < qty) {
       return json({ error: `Insufficient stock for ${p.name}` }, 400);

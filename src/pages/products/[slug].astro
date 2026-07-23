@@ -36,6 +36,7 @@ const [related, reviews] = await Promise.all([
 const avg = averageRating(reviews);
 const off = discountPct(product.mrp, product.price);
 const outOfStock = product.stock <= 0;
+const onRequest = !product.price || product.price <= 0;
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -117,13 +118,21 @@ const jsonLd = {
       </div>
 
       <div class="mb-6 flex items-baseline gap-3">
-        <span class="text-3xl font-extrabold text-slate-900 dark:text-white">
-          {formatMoney(product.price, currency)}
-        </span>
-        {off > 0 && (
+        {onRequest ? (
+          <span class="text-2xl font-bold text-brand-600 dark:text-brand-400">
+            Available on request
+          </span>
+        ) : (
           <>
-            <span class="text-lg text-slate-400 line-through">{formatMoney(product.mrp, currency)}</span>
-            <span class="badge bg-brand-600 text-white">{off}% {t("product.save")}</span>
+            <span class="text-3xl font-extrabold text-slate-900 dark:text-white">
+              {formatMoney(product.price, currency)}
+            </span>
+            {off > 0 && (
+              <>
+                <span class="text-lg text-slate-400 line-through">{formatMoney(product.mrp, currency)}</span>
+                <span class="badge bg-brand-600 text-white">{off}% {t("product.save")}</span>
+              </>
+            )}
           </>
         )}
       </div>
@@ -144,10 +153,18 @@ const jsonLd = {
       </dl>
 
       <div class="mb-6 flex gap-3">
-        <AddToCartButton client:visible productId={product.id} disabled={outOfStock} label={outOfStock ? t("product.outOfStock") : t("product.addToCart")} className="btn-primary flex-1" />
-        <div class="flex-1">
-          <BuyNowButton client:visible productId={product.id} disabled={outOfStock} />
-        </div>
+        {onRequest ? (
+          <a href={`/contact?product=${encodeURIComponent(product.name)}`} class="btn-primary flex-1 text-center">
+            Request this medicine
+          </a>
+        ) : (
+          <>
+            <AddToCartButton client:visible productId={product.id} disabled={outOfStock} label={outOfStock ? t("product.outOfStock") : t("product.addToCart")} className="btn-primary flex-1" />
+            <div class="flex-1">
+              <BuyNowButton client:visible productId={product.id} disabled={outOfStock} />
+            </div>
+          </>
+        )}
       </div>
 
       {product.description && (

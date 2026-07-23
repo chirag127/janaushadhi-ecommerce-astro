@@ -33,6 +33,7 @@ export interface ProductQuery {
   sort?: "newest" | "price_asc" | "price_desc" | "name";
   page?: number;
   featuredOnly?: boolean;
+  excludeOnRequest?: boolean;
 }
 
 export async function getProducts(
@@ -53,6 +54,7 @@ export async function getProducts(
   if (q.search) query = query.ilike("name", `%${q.search}%`);
   if (typeof q.minPrice === "number") query = query.gte("price", q.minPrice);
   if (typeof q.maxPrice === "number") query = query.lte("price", q.maxPrice);
+  if (q.excludeOnRequest) query = query.gt("price", 0);
 
   switch (q.sort) {
     case "price_asc":

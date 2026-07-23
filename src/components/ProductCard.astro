@@ -13,6 +13,7 @@ export interface Props {
 const { product, currency } = Astro.props;
 const off = discountPct(product.mrp, product.price);
 const outOfStock = product.stock <= 0;
+const onRequest = !product.price || product.price <= 0;
 ---
 
 <article class="card group flex flex-col overflow-hidden transition-shadow hover:shadow-md">
@@ -62,22 +63,39 @@ const outOfStock = product.stock <= 0;
     )}
     <div class="mt-auto">
       <div class="mb-3 flex items-baseline gap-2">
-        <span class="text-lg font-bold text-slate-900 dark:text-white">
-          {formatMoney(product.price, currency)}
-        </span>
-        {off > 0 && (
-          <span class="text-sm text-slate-400 line-through">
-            {formatMoney(product.mrp, currency)}
+        {onRequest ? (
+          <span class="text-sm font-semibold text-brand-600 dark:text-brand-400">
+            Available on request
           </span>
+        ) : (
+          <>
+            <span class="text-lg font-bold text-slate-900 dark:text-white">
+              {formatMoney(product.price, currency)}
+            </span>
+            {off > 0 && (
+              <span class="text-sm text-slate-400 line-through">
+                {formatMoney(product.mrp, currency)}
+              </span>
+            )}
+          </>
         )}
       </div>
-      <AddToCartButton
-        client:visible
-        productId={product.id}
-        disabled={outOfStock}
-        label={outOfStock ? "Out of Stock" : "Add to Cart"}
-        className="btn-primary w-full text-xs"
-      />
+      {onRequest ? (
+        <a
+          href={`/contact?product=${encodeURIComponent(product.name)}`}
+          class="btn-secondary block w-full text-center text-xs"
+        >
+          Request this medicine
+        </a>
+      ) : (
+        <AddToCartButton
+          client:visible
+          productId={product.id}
+          disabled={outOfStock}
+          label={outOfStock ? "Out of Stock" : "Add to Cart"}
+          className="btn-primary w-full text-xs"
+        />
+      )}
     </div>
   </div>
 </article>

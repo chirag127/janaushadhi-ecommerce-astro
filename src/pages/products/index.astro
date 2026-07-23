@@ -26,6 +26,7 @@ const sort = (params.get("sort") ?? "newest") as
 const search = params.get("q") ?? undefined;
 const minPrice = params.get("min") ? Number(params.get("min")) : undefined;
 const maxPrice = params.get("max") ? Number(params.get("max")) : undefined;
+const excludeOnRequest = params.get("in_stock_priced") === "1";
 
 const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
 const categories = await getCategories(insforge);
@@ -40,6 +41,7 @@ const { products, total } = await getProducts(insforge, {
   search,
   minPrice,
   maxPrice,
+  excludeOnRequest,
 });
 
 // baseUrl for pagination (preserve filters, drop page)
@@ -89,6 +91,10 @@ const sortOptions = [
         </div>
         {search && <input type="hidden" name="q" value={search} />}
         <input type="hidden" name="sort" value={sort} />
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="in_stock_priced" value="1" checked={excludeOnRequest} />
+          <span>Exclude "on request" items</span>
+        </label>
         <button type="submit" class="btn-primary w-full text-sm">{t("common.filter")}</button>
         <a href="/products" class="btn-ghost w-full text-sm">Reset</a>
       </form>

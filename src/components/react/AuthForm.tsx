@@ -1,9 +1,17 @@
 import { useState } from "react";
+import { getInsForge } from "@lib/insforge/browser";
 
 interface Props {
   mode: "login" | "register";
   next?: string;
 }
+
+const OAUTH_PROVIDERS = [
+  { key: "google", label: "Google" },
+  { key: "github", label: "GitHub" },
+  { key: "microsoft", label: "Microsoft" },
+  { key: "facebook", label: "Facebook" },
+] as const;
 
 export default function AuthForm({ mode, next = "/" }: Props) {
   const [email, setEmail] = useState("");
@@ -47,8 +55,39 @@ export default function AuthForm({ mode, next = "/" }: Props) {
     }
   };
 
+  const oauth = async (provider: string) => {
+    setError("");
+    try {
+      await getInsForge().auth.signInWithOAuth(provider, {
+        redirectTo: `${location.origin}${next}`,
+        additionalParams: { prompt: "select_account" },
+      });
+      // SDK redirects the browser to the provider.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "OAuth failed");
+    }
+  };
+
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        {OAUTH_PROVIDERS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => oauth(p.key)}
+            className="btn-secondary text-sm"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 text-xs text-slate-400">
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+        or continue with email
+        <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+      </div>
+      <form onSubmit={submit} className="space-y-4">
       {mode === "register" && (
         <div>
           <label className="label">Full Name</label>
@@ -92,6 +131,7 @@ export default function AuthForm({ mode, next = "/" }: Props) {
             ? "Login"
             : "Create Account"}
       </button>
-    </form>
+      </form>
+    </div>
   );
 }

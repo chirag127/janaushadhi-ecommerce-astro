@@ -43,6 +43,7 @@ export default function CheckoutView({ currency = "INR" }: Props) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [coupon, setCoupon] = useState("");
   const [addr, setAddr] = useState({
     full_name: "",
     phone: "",
@@ -108,6 +109,7 @@ export default function CheckoutView({ currency = "INR" }: Props) {
         body: JSON.stringify({
           items: lines.map((l) => ({ productId: l.id, quantity: l.qty })),
           address: addr,
+          couponCode: coupon.trim() || undefined,
         }),
       });
       const data = (await res.json()) as {
@@ -252,6 +254,26 @@ export default function CheckoutView({ currency = "INR" }: Props) {
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Shipping</span>
             <span>{shipping === 0 ? "FREE" : fmt(shipping, currency)}</span>
+          </div>
+          <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+            <label
+              htmlFor="coupon"
+              className="mb-1 block text-xs font-medium text-slate-500"
+            >
+              Promo code
+            </label>
+            <input
+              id="coupon"
+              type="text"
+              value={coupon}
+              onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+              placeholder="Enter coupon code"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase dark:border-slate-700 dark:bg-slate-900"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-slate-400">
+              Discount applied at checkout after validation.
+            </p>
           </div>
           <div className="flex justify-between border-t border-slate-200 pt-3 font-bold dark:border-slate-800">
             <span>Total (INR)</span>

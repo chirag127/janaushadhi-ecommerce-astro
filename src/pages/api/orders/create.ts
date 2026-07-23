@@ -21,6 +21,7 @@ const RZP_ENV: "test" | "live" = TEST_MODE ? "test" : "live";
 interface CheckoutBody {
   items: { productId: string; quantity: number }[];
   address: ShippingAddress;
+  couponCode?: string;
 }
 
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
@@ -76,7 +77,72 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 
   const shipping = computeShipping(subtotal);
-  const total = Math.round((subtotal + shipping) * 100) / 100;
+
+  // Optional coupon: validate server-side against the coupons table.
+  let discount = 0;
+  let couponId: string | null = null;
+  const code = body.couponCode?.trim().toUpperCase();
+  if (code) {
+    const { data: c } = await insforge.database
+      .from("coupons")
+      .select("*")
+      .eq("code", code)
+      .eq("is_active", true)
+      .maybeSingle();
+    const coupon = c as {
+      id: string;
+      discount_type: "percent" | "fixed";
+      discount_value: number;
+      min_order_amount: number | null;
+      max_discount_amount: number | null;
+      usage_limit: number | null;
+      used_count: number | null;
+      per_user_limit: number | null;
+      starts_at: string | null;
+      expires_at: string | null;
+    } | null;
+    if (!coupon) return json({ error: "Invalid coupon code" }, 400);
+    const now = Date.now();
+    if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) {
+      return json({ error: "Coupon is not active yet" }, 400);
+    }
+    if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) {
+      return json({ error: "Coupon has expired" }, 400);
+    }
+    if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
+      return json(
+        { error: `Order must be at least ₹${coupon.min_order_amount}` },
+        400,
+      );
+    }
+    if (
+      coupon.usage_limit != null &&
+      (coupon.used_count ?? 0) >= coupon.usage_limit
+    ) {
+      return json({ error: "Coupon usage limit reached" }, 400);
+    }
+    if (coupon.per_user_limit != null) {
+      const { count } = await insforge.database
+        .from("coupon_redemptions")
+        .select("id", { count: "exact", head: true })
+        .eq("coupon_id", coupon.id)
+        .eq("user_id", uid);
+      if ((count ?? 0) >= coupon.per_user_limit) {
+        return json({ error: "You have already used this coupon" }, 400);
+      }
+    }
+    discount =
+      coupon.discount_type === "percent"
+        ? (subtotal * coupon.discount_value) / 100
+        : coupon.discount_value;
+    if (coupon.max_discount_amount) {
+      discount = Math.min(discount, coupon.max_discount_amount);
+    }
+    discount = Math.min(Math.round(discount * 100) / 100, subtotal);
+    couponId = coupon.id;
+  }
+
+  const total = Math.round((subtotal - discount + shipping) * 100) / 100;
   const orderNumber = generateOrderNumber();
 
   // 1. Create the app-owned pending order.
@@ -91,6 +157,8 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         subtotal,
         shipping,
         total,
+        discount,
+        coupon_id: couponId,
         currency: "INR",
         shipping_address: body.address,
         is_test_payment: TEST_MODE,
@@ -110,6 +178,25 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     .insert(lineItems.map((li) => ({ order_id: order.id, ...li })));
   if (itemsErr) {
     return json({ error: itemsErr.message }, 400);
+  }
+
+  // Record coupon redemption + bump usage (best-effort; order already exists).
+  if (couponId && discount > 0) {
+    const admin = createInsForgeAdmin(locals);
+    await admin.database
+      .from("coupon_redemptions")
+      .insert([
+        { coupon_id: couponId, user_id: uid, order_id: order.id, amount: discount },
+      ]);
+    const { data: cur } = await admin.database
+      .from("coupons")
+      .select("used_count")
+      .eq("id", couponId)
+      .maybeSingle();
+    await admin.database
+      .from("coupons")
+      .update({ used_count: ((cur as { used_count: number } | null)?.used_count ?? 0) + 1 })
+      .eq("id", couponId);
   }
 
   // 3. Create the Razorpay order via InsForge managed payments.

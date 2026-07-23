@@ -1,0 +1,12 @@
+---
+import Layout from "@layouts/Layout.astro";
+import OAuthCallback from "@components/react/OAuthCallback.tsx";
+
+export const prerender = false;
+
+const next = new URL(Astro.request.url).searchParams.get("next") ?? "/";
+---
+
+<Layout title="Signing in…" noindex>
+  <OAuthCallback client:only="react" next={next} />
+</Layout>

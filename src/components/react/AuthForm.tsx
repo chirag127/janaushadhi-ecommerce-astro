@@ -59,7 +59,7 @@ export default function AuthForm({ mode, next = "/" }: Props) {
     setError("");
     try {
       await getInsForge().auth.signInWithOAuth(provider, {
-        redirectTo: `${location.origin}${next}`,
+        redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         additionalParams: { prompt: "select_account" },
       });
       // SDK redirects the browser to the provider.

@@ -38,10 +38,10 @@ jobs:
       - name: Build (astro) + deploy
         run: |
           pnpm build
-          pnpm exec wrangler deploy
+          pnpm dlx wrangler@latest deploy
       - name: Push runtime secrets to the Worker
         run: |
           for KEY in DATABASE_URL NEON_AUTH_BASE_URL NEON_AUTH_COOKIE_SECRET RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET; do
             VAL="${!KEY}"
-            if [ -n "$VAL" ]; then echo "$VAL" | pnpm exec wrangler secret put "$KEY"; fi
+            if [ -n "$VAL" ]; then echo "$VAL" | pnpm dlx wrangler@latest secret put "$KEY"; fi
           done

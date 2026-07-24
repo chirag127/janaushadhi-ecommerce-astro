@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createInsForgeAuthActions } from "@lib/insforge/server";
+import { createAuthStub } from "@lib/insforge/server";
 
 export const prerender = false;
 
@@ -10,7 +10,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const body = (await request.json().catch(() => ({}))) as {
     email?: string;
     password?: string;
@@ -18,13 +18,11 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   if (!body.email || !body.password) {
     return json({ error: "Email and password are required" }, 400);
   }
-
-  const auth = createInsForgeAuthActions(cookies, locals);
+  const auth = createAuthStub(cookies);
   const { data, error } = await auth.signInWithPassword({
     email: body.email,
     password: body.password,
   });
-
   if (error || !data?.user) {
     return json({ error: error?.message ?? "Invalid credentials" }, 401);
   }

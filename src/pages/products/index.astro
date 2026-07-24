@@ -3,7 +3,7 @@ import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import ProductCard from "@components/ProductCard.astro";
 import Pagination from "@components/Pagination.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getProducts, getCategories, PAGE_SIZE } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import type { Currency } from "@lib/currency";
@@ -28,13 +28,13 @@ const minPrice = params.get("min") ? Number(params.get("min")) : undefined;
 const maxPrice = params.get("max") ? Number(params.get("max")) : undefined;
 const excludeOnRequest = params.get("in_stock_priced") === "1";
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const categories = await getCategories(insforge);
+const db = getDb();
+const categories = await getCategories(db);
 const selectedCat = categorySlug
   ? categories.find((c) => c.slug === categorySlug)
   : undefined;
 
-const { products, total } = await getProducts(insforge, {
+const { products, total } = await getProducts(db, {
   page,
   categoryId: selectedCat?.id,
   sort,

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { dbDeleteCartItem } from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -10,17 +11,10 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const DELETE: APIRoute = async ({ params, cookies, locals }) => {
+export const DELETE: APIRoute = async ({ params, locals }) => {
   if (!locals.user) return json({ error: "Not authenticated" }, 401);
   const productId = params.productId;
   if (!productId) return json({ error: "productId required" }, 400);
-
-  const insforge = createInsForgeServer(cookies, locals);
-  const { error } = await insforge.database
-    .from("cart_items")
-    .delete()
-    .eq("user_id", locals.user.id)
-    .eq("product_id", productId);
-  if (error) return json({ error: error.message }, 400);
+  await dbDeleteCartItem(getDb(), locals.user.id, productId);
   return json({ ok: true });
 };

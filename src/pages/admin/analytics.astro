@@ -1,6 +1,10 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbGetAnalyticsOrders,
+  dbGetAnalyticsOrderItems,
+} from "@lib/db/repository";
 import { formatMoney } from "@lib/currency";
 
 export const prerender = false;
@@ -17,20 +21,9 @@ interface ItemLite {
   line_total: number;
 }
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-
-const { data: ordData } = await insforge.database
-  .from("orders")
-  .select("id, total, status, created_at")
-  .order("created_at", { ascending: false })
-  .limit(1000);
-const orders = (ordData as OrderLite[]) ?? [];
-
-const { data: itemData } = await insforge.database
-  .from("order_items")
-  .select("product_name, quantity, line_total")
-  .limit(2000);
-const items = (itemData as ItemLite[]) ?? [];
+const db = getDb();
+const orders = (await dbGetAnalyticsOrders(db, 1000)) as OrderLite[];
+const items = (await dbGetAnalyticsOrderItems(db, 2000)) as ItemLite[];
 
 const revenueStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
 const paidOrders = orders.filter((o) => revenueStatuses.has(o.status));

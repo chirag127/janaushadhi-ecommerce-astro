@@ -1,14 +1,6 @@
-import { createAdminClient } from "@insforge/sdk";
-import { getEnv } from "./server";
-
 /**
- * Server-only admin client (full access, bypasses RLS).
- * Use ONLY in API routes / server code that has already authorized the caller.
- * Never import into browser/client components.
+ * Admin DB client stub — InsForge admin client replaced by Neon/Drizzle.
+ * Fulfillment + verification now use getDb() directly.
+ * This file is kept for import compatibility; nothing should import it.
  */
-export function createInsForgeAdmin(locals: App.Locals) {
-  return createAdminClient({
-    baseUrl: getEnv(locals, "INSFORGE_URL"),
-    apiKey: getEnv(locals, "INSFORGE_API_KEY"),
-  });
-}
+export {};

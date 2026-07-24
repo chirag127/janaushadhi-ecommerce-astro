@@ -1,31 +1,20 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbGetLowStockProducts,
+  dbCountTable,
+  dbCountProductsWithStock,
+} from "@lib/db/repository";
 import { formatMoney } from "@lib/currency";
 import type { Product } from "@lib/types";
 
 export const prerender = false;
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-
-// Low stock first, then out of stock highlighted.
-const { data: lowData } = await insforge.database
-  .from("products")
-  .select("id, name, drug_code, price, stock, is_active")
-  .lte("stock", 10)
-  .order("stock", { ascending: true })
-  .limit(200);
-const low = (lowData as Product[]) ?? [];
-
-const { count: totalProducts } = await insforge.database
-  .from("products")
-  .select("id", { count: "exact" })
-  .limit(1);
-const { count: outOfStock } = await insforge.database
-  .from("products")
-  .select("id", { count: "exact" })
-  .eq("stock", 0)
-  .limit(1);
+const db = getDb();
+const low = (await dbGetLowStockProducts(db, 10, 200)) as Product[];
+const totalProducts = await dbCountTable(db, "products");
+const outOfStock = await dbCountProductsWithStock(db, 0);
 
 const inventoryValue = low.reduce((s, p) => s + p.price * p.stock, 0);
 ---

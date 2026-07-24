@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { dbUpdateCartItemQty, dbDeleteCartItem } from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -10,7 +11,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return json({ error: "Not authenticated" }, 401);
   const { productId, quantity } = (await request.json().catch(() => ({}))) as {
     productId?: string;
@@ -20,23 +21,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     return json({ error: "productId and quantity required" }, 400);
   }
 
-  const insforge = createInsForgeServer(cookies, locals);
+  const db = getDb();
   const uid = locals.user.id;
 
   if (quantity <= 0) {
-    await insforge.database
-      .from("cart_items")
-      .delete()
-      .eq("user_id", uid)
-      .eq("product_id", productId);
+    await dbDeleteCartItem(db, uid, productId);
     return json({ ok: true, removed: true });
   }
-
-  const { error } = await insforge.database
-    .from("cart_items")
-    .update({ quantity })
-    .eq("user_id", uid)
-    .eq("product_id", productId);
-  if (error) return json({ error: error.message }, 400);
+  await dbUpdateCartItemQty(db, uid, productId, quantity);
   return json({ ok: true });
 };

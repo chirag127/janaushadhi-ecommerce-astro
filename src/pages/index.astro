@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import ProductCard from "@components/ProductCard.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getFeaturedProducts, getCategories, getProducts } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import type { Currency } from "@lib/currency";
@@ -12,15 +12,14 @@ const locale = (Astro.locals.locale ?? "en") as Locale;
 const currency = (Astro.locals.currency ?? "INR") as Currency;
 const t = useTranslations(locale);
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
+const db = getDb();
 
-let featured = await getFeaturedProducts(insforge, 8);
+let featured = await getFeaturedProducts(db, 8);
 if (featured.length === 0) {
-  // fallback to newest products if none marked featured
-  const { products } = await getProducts(insforge, { page: 1 });
+  const { products } = await getProducts(db, { page: 1 });
   featured = products.slice(0, 8);
 }
-const categories = (await getCategories(insforge)).slice(0, 12);
+const categories = (await getCategories(db)).slice(0, 12);
 
 const orgJsonLd = {
   "@context": "https://schema.org",

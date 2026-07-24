@@ -1,5 +1,11 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbGetAllCoupons,
+  dbInsertCoupon,
+  dbUpdateCoupon,
+  dbDeleteCoupon,
+} from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -14,34 +20,19 @@ function guard(locals: App.Locals) {
 }
 
 const FIELDS = [
-  "code",
-  "description",
-  "discount_type",
-  "discount_value",
-  "min_order_amount",
-  "max_discount_amount",
-  "usage_limit",
-  "per_user_limit",
-  "starts_at",
-  "expires_at",
-  "is_active",
-];
+  "code", "description", "discount_type", "discount_value",
+  "min_order_amount", "max_discount_amount", "usage_limit", "per_user_limit",
+  "starts_at", "expires_at", "is_active",
+] as const;
 
 function normalize(b: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const k of FIELDS) {
     if (!(k in b)) continue;
     const v = b[k];
-    if (v === "" || v === undefined) {
-      out[k] = null;
-      continue;
-    }
-    if (
-      k === "discount_value" ||
-      k === "min_order_amount" ||
-      k === "max_discount_amount"
-    ) {
-      out[k] = v === null ? null : Number(v);
+    if (v === "" || v === undefined) { out[k] = null; continue; }
+    if (k === "discount_value" || k === "min_order_amount" || k === "max_discount_amount") {
+      out[k] = v === null ? null : String(Number(v));
     } else if (k === "usage_limit" || k === "per_user_limit") {
       out[k] = v === null ? null : Math.trunc(Number(v));
     } else {
@@ -51,49 +42,55 @@ function normalize(b: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const GET: APIRoute = async ({ locals }) => {
+  if (!guard(locals)) return json({ error: "Forbidden" }, 403);
+  try {
+    const coupons = await dbGetAllCoupons(getDb());
+    return json({ coupons });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const b = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (!b.code) return json({ error: "code required" }, 400);
-  const insforge = createInsForgeServer(cookies, locals);
-  const row = normalize(b);
-  row.code = String(b.code).toUpperCase().trim();
-  if (!("discount_type" in row)) row.discount_type = "percent";
-  const { data, error } = await insforge.database
-    .from("coupons")
-    .insert([row])
-    .select()
-    .single();
-  if (error) return json({ error: error.message }, 400);
-  return json({ coupon: data });
+  try {
+    const row = normalize(b) as Record<string, unknown>;
+    row.code = String(b.code).toUpperCase().trim();
+    if (!("discount_type" in row)) row.discount_type = "percent";
+    if (!("discount_value" in row)) row.discount_value = "0";
+    const coupon = await dbInsertCoupon(getDb(), row as Parameters<typeof dbInsertCoupon>[1]);
+    return json({ coupon });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };
 
-export const PUT: APIRoute = async ({ request, cookies, locals }) => {
+export const PUT: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const b = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (!b.id) return json({ error: "id required" }, 400);
-  const insforge = createInsForgeServer(cookies, locals);
-  const patch = normalize(b);
-  if (patch.code) patch.code = String(patch.code).toUpperCase().trim();
-  const { data, error } = await insforge.database
-    .from("coupons")
-    .update(patch)
-    .eq("id", b.id as string)
-    .select()
-    .single();
-  if (error) return json({ error: error.message }, 400);
-  return json({ coupon: data });
+  try {
+    const patch = normalize(b);
+    if (patch.code) patch.code = String(patch.code).toUpperCase().trim();
+    const coupon = await dbUpdateCoupon(getDb(), b.id as string, patch as Parameters<typeof dbUpdateCoupon>[2]);
+    if (!coupon) return json({ error: "Coupon not found" }, 404);
+    return json({ coupon });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };
 
-export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const { id } = (await request.json().catch(() => ({}))) as { id?: string };
   if (!id) return json({ error: "id required" }, 400);
-  const insforge = createInsForgeServer(cookies, locals);
-  const { error } = await insforge.database
-    .from("coupons")
-    .delete()
-    .eq("id", id);
-  if (error) return json({ error: error.message }, 400);
-  return json({ ok: true });
+  try {
+    await dbDeleteCoupon(getDb(), id);
+    return json({ ok: true });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };

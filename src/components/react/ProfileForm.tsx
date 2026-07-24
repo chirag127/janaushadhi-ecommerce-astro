@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { getInsForge } from "@lib/insforge/browser";
 
 interface Props {
   initialName: string;
@@ -9,9 +8,7 @@ interface Props {
 export default function ProfileForm({ initialName, initialPhone }: Props) {
   const [fullName, setFullName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone);
-  const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [msg, setMsg] = useState("");
 
   const save = async (e: React.FormEvent) => {
@@ -19,15 +16,13 @@ export default function ProfileForm({ initialName, initialPhone }: Props) {
     setStatus("saving");
     setMsg("");
     try {
-      const insforge = getInsForge();
-      const user = await insforge.auth.getCurrentUser();
-      const uid = (user.data as { user?: { id: string } } | null)?.user?.id;
-      if (!uid) throw new Error("Not authenticated");
-      const { error } = await insforge.database
-        .from("profiles")
-        .update({ full_name: fullName, phone })
-        .eq("id", uid);
-      if (error) throw new Error(error.message);
+      const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: fullName, phone }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to update");
       setStatus("done");
       setMsg("Profile updated.");
     } catch (err) {
@@ -55,13 +50,7 @@ export default function ProfileForm({ initialName, initialPhone }: Props) {
         />
       </div>
       {msg && (
-        <p
-          className={
-            status === "error"
-              ? "text-sm text-rose-600"
-              : "text-sm text-brand-600"
-          }
-        >
+        <p className={status === "error" ? "text-sm text-rose-600" : "text-sm text-brand-600"}>
           {msg}
         </p>
       )}

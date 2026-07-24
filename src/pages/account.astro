@@ -3,23 +3,18 @@ import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import ProfileForm from "@components/react/ProfileForm.tsx";
 import AddressBook from "@components/react/AddressBook.tsx";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { dbGetProfile } from "@lib/db/repository";
 import { useTranslations, type Locale } from "@lib/i18n";
 
 export const prerender = false;
 
-// middleware guards /account
 const locale = (Astro.locals.locale ?? "en") as Locale;
 const t = useTranslations(locale);
 const user = Astro.locals.user!;
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const { data: profile } = await insforge.database
-  .from("profiles")
-  .select("full_name, phone")
-  .eq("id", user.id)
-  .maybeSingle();
-const p = (profile as { full_name?: string; phone?: string } | null) ?? {};
+const profile = await dbGetProfile(getDb(), user.id);
+const p = { full_name: profile?.full_name ?? "", phone: profile?.phone ?? "" };
 ---
 
 <Layout title={t("nav.account")} noindex>

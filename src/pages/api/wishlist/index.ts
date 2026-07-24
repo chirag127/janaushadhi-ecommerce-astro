@@ -1,5 +1,10 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbGetWishlistItem,
+  dbAddWishlistItem,
+  dbDeleteWishlistItem,
+} from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -10,34 +15,21 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Toggle a product in the user's wishlist.
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return json({ error: "Not authenticated" }, 401);
   const { productId } = (await request.json().catch(() => ({}))) as {
     productId?: string;
   };
   if (!productId) return json({ error: "productId required" }, 400);
 
-  const insforge = createInsForgeServer(cookies, locals);
+  const db = getDb();
   const uid = locals.user.id;
-
-  const { data: existing } = await insforge.database
-    .from("wishlist_items")
-    .select("id")
-    .eq("user_id", uid)
-    .eq("product_id", productId)
-    .maybeSingle();
+  const existing = await dbGetWishlistItem(db, uid, productId);
 
   if (existing) {
-    await insforge.database
-      .from("wishlist_items")
-      .delete()
-      .eq("id", (existing as { id: string }).id);
+    await dbDeleteWishlistItem(db, uid, productId);
     return json({ added: false });
   }
-  const { error } = await insforge.database
-    .from("wishlist_items")
-    .insert([{ user_id: uid, product_id: productId }]);
-  if (error) return json({ error: error.message }, 400);
+  await dbAddWishlistItem(db, uid, productId);
   return json({ added: true });
 };

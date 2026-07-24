@@ -1,38 +1,29 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbCountTable,
+  dbCountLowStock,
+  dbGetRecentOrders,
+} from "@lib/db/repository";
 import { formatMoney } from "@lib/currency";
 import { formatDate } from "@lib/utils";
 import type { Order } from "@lib/types";
 
 export const prerender = false;
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-
-// Counts via exact count (select minimal column, we ignore the rows).
-async function count(table: string, filter?: (q: any) => any): Promise<number> {
-  let q = insforge.database.from(table).select("id", { count: "exact" }).limit(1);
-  if (filter) q = filter(q);
-  const { count: c } = await q;
-  return c ?? 0;
-}
+const db = getDb();
 
 const [productCount, categoryCount, orderCount, customerCount, lowStock] =
   await Promise.all([
-    count("products"),
-    count("categories"),
-    count("orders"),
-    count("profiles"),
-    count("products", (q) => q.lte("stock", 5).eq("is_active", true)),
+    dbCountTable(db, "products"),
+    dbCountTable(db, "categories"),
+    dbCountTable(db, "orders"),
+    dbCountTable(db, "profiles"),
+    dbCountLowStock(db, 5),
   ]);
 
-// Recent orders + revenue (paid/processing/shipped/delivered count toward revenue).
-const { data: ordersData } = await insforge.database
-  .from("orders")
-  .select("*")
-  .order("created_at", { ascending: false })
-  .limit(200);
-const orders = (ordersData as Order[]) ?? [];
+const orders = await dbGetRecentOrders(db, 200);
 const revenueStatuses = new Set(["paid", "processing", "shipped", "delivered"]);
 const revenue = orders
   .filter((o) => revenueStatuses.has(o.status))

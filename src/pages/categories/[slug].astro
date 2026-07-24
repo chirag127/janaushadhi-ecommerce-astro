@@ -3,7 +3,7 @@ import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import ProductCard from "@components/ProductCard.astro";
 import Pagination from "@components/Pagination.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getCategoryBySlug, getProducts, PAGE_SIZE } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import type { Currency } from "@lib/currency";
@@ -15,8 +15,8 @@ const locale = (Astro.locals.locale ?? "en") as Locale;
 const currency = (Astro.locals.currency ?? "INR") as Currency;
 const t = useTranslations(locale);
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const category = await getCategoryBySlug(insforge, slug!);
+const db = getDb();
+const category = await getCategoryBySlug(db, slug!);
 if (!category) return Astro.redirect("/404");
 
 const url = new URL(Astro.request.url);
@@ -27,7 +27,7 @@ const sort = (url.searchParams.get("sort") ?? "newest") as
   | "price_desc"
   | "name";
 
-const { products, total } = await getProducts(insforge, {
+const { products, total } = await getProducts(db, {
   categoryId: category.id,
   page,
   sort,

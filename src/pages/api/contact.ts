@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { dbInsertContactMessage } from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -10,7 +11,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   const b = (await request.json().catch(() => ({}))) as {
     name?: string;
     email?: string;
@@ -20,15 +21,15 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   if (!b.name || !b.email || !b.message) {
     return json({ error: "Name, email and message are required" }, 400);
   }
-  const insforge = createInsForgeServer(cookies, locals);
-  const { error } = await insforge.database.from("contact_messages").insert([
-    {
+  try {
+    await dbInsertContactMessage(getDb(), {
       name: b.name,
       email: b.email,
       subject: b.subject ?? null,
       message: b.message,
-    },
-  ]);
-  if (error) return json({ error: error.message }, 400);
-  return json({ ok: true });
+    });
+    return json({ ok: true });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };

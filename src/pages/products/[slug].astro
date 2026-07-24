@@ -7,7 +7,7 @@ import AddToCartButton from "@components/react/AddToCartButton.tsx";
 import BuyNowButton from "@components/react/BuyNowButton.tsx";
 import WishlistButton from "@components/react/WishlistButton.tsx";
 import ReviewForm from "@components/react/ReviewForm.tsx";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import {
   getProductBySlug,
   getRelatedProducts,
@@ -25,13 +25,13 @@ const locale = (Astro.locals.locale ?? "en") as Locale;
 const currency = (Astro.locals.currency ?? "INR") as Currency;
 const t = useTranslations(locale);
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const product = await getProductBySlug(insforge, slug!);
+const db = getDb();
+const product = await getProductBySlug(db, slug!);
 if (!product) return Astro.redirect("/404");
 
 const [related, reviews] = await Promise.all([
-  getRelatedProducts(insforge, product.category_id, product.id, 4),
-  getReviews(insforge, product.id),
+  getRelatedProducts(db, product.category_id, product.id, 4),
+  getReviews(db, product.id),
 ]);
 const avg = averageRating(reviews);
 const off = discountPct(product.mrp, product.price);

@@ -1,14 +1,9 @@
 import type { APIRoute } from "astro";
-import { createInsForgeAuthActions } from "@lib/insforge/server";
+import { createAuthStub } from "@lib/insforge/server";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ cookies, locals, redirect }) => {
-  const auth = createInsForgeAuthActions(cookies, locals);
-  try {
-    await auth.signOut();
-  } catch {
-    /* ignore */
-  }
+export const POST: APIRoute = async ({ cookies, redirect }) => {
+  await createAuthStub(cookies).signOut().catch(() => {});
   return redirect("/");
 };

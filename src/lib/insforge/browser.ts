@@ -1,18 +1,34 @@
-import { createBrowserClient } from "@insforge/sdk/ssr";
-
-let client: ReturnType<typeof createBrowserClient> | null = null;
-
 /**
- * Singleton browser InsForge client. Reads the browser-readable
- * `insforge_access_token` cookie and refreshes via /api/auth/refresh.
- * Auth mutations (sign in/up/out) must go through server routes.
+ * Browser auth stub — replaces InsForge browser client.
+ * OAuth / reset-password flows need a real auth provider wired here.
  */
-export function getInsForge() {
-  if (client) return client;
-  client = createBrowserClient({
-    baseUrl: import.meta.env.PUBLIC_INSFORGE_URL,
-    anonKey: import.meta.env.PUBLIC_INSFORGE_ANON_KEY,
-    refreshUrl: "/api/auth/refresh",
-  });
-  return client;
+
+export interface BrowserAuthStub {
+  auth: {
+    signInWithOAuth(provider: string, opts?: unknown): Promise<void>;
+    exchangeOAuthCode(code: string): Promise<{ error: { message: string } | null }>;
+    resetPassword(opts: { newPassword: string; otp: string }): Promise<{ error: { message: string } | null }>;
+    getCurrentUser(): Promise<{ data: { user: { id: string } | null } }>;
+  };
+}
+
+let _stub: BrowserAuthStub | null = null;
+
+export function getInsForge(): BrowserAuthStub {
+  if (_stub) return _stub;
+  _stub = {
+    auth: {
+      async signInWithOAuth() {},
+      async exchangeOAuthCode() {
+        return { error: { message: "OAuth not yet configured" } };
+      },
+      async resetPassword() {
+        return { error: { message: "Auth not yet configured" } };
+      },
+      async getCurrentUser() {
+        return { data: { user: null } };
+      },
+    },
+  };
+  return _stub;
 }

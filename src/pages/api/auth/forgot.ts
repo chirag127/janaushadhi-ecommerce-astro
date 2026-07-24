@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { getEnv } from "@lib/insforge/server";
-import { createClient } from "@insforge/sdk";
+import { createAuthStub } from "@lib/insforge/server";
 
 export const prerender = false;
 
@@ -11,25 +10,15 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const body = (await request.json().catch(() => ({}))) as { email?: string };
-  if (!body.email) {
-    return json({ error: "Email is required" }, 400);
-  }
+  if (!body.email) return json({ error: "Email is required" }, 400);
 
-  const insforge = createClient({
-    baseUrl: getEnv(locals, "PUBLIC_INSFORGE_URL"),
-    anonKey: getEnv(locals, "PUBLIC_INSFORGE_ANON_KEY"),
-  });
-
-  const { error } = await insforge.auth.sendResetPasswordEmail({
+  const auth = createAuthStub(cookies);
+  const { error } = await auth.sendResetPasswordEmail({
     email: body.email,
     redirectTo: `${new URL(request.url).origin}/reset-password`,
   });
-
-  // Always return success to avoid email enumeration
-  if (error) {
-    console.error("[forgot] sendResetPasswordEmail error:", error.message);
-  }
+  if (error) console.error("[forgot]", error.message);
   return json({ ok: true });
 };

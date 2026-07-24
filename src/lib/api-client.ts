@@ -1,18 +1,24 @@
 /**
- * Client-side API helpers (browser). Talk to the app's own API routes,
- * which use the InsForge server client with the user's session cookie.
+ * Client-side API helpers (browser). Talk to the app's own API routes.
+ * Extended with product fetch endpoints for cart/wishlist/checkout views.
  */
-async function post<T = unknown>(url: string, body: unknown): Promise<T> {
+async function fetchJSON<T = unknown>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    ...opts,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error ?? `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+async function post<T = unknown>(url: string, body: unknown): Promise<T> {
+  return fetchJSON<T>(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 async function del(url: string): Promise<void> {
@@ -38,3 +44,14 @@ export const reviewApi = {
   submit: (productId: string, rating: number, title: string, comment: string) =>
     post("/api/reviews", { productId, rating, title, comment }),
 };
+
+/** Fetch product data for given IDs via public API endpoint */
+export async function fetchProductsByIds(ids: string[]): Promise<unknown[]> {
+  if (!ids.length) return [];
+  const params = new URLSearchParams();
+  ids.forEach((id) => params.append("id", id));
+  const res = await fetch(`/api/products?${params.toString()}`);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { products?: unknown[] };
+  return data.products ?? [];
+}

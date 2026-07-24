@@ -64,7 +64,7 @@ const userId = Astro.locals.user?.id ?? "";
     </script>
     <script>
       import { $userId } from "@lib/stores";
-      $userId.set(window.__JA_USER_ID__ ?? null);
+      $userId.set((window as unknown as Record<string, string | null>)["__JA_USER_ID__"] ?? null);
     </script>
   </body>
 </html>

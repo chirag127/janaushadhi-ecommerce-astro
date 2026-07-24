@@ -1,14 +1,13 @@
 ---
 import AdminLayout from "@layouts/AdminLayout.astro";
 import ProductAdmin from "@components/react/admin/ProductAdmin.tsx";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getCategories } from "@lib/queries";
 import type { Category } from "@lib/types";
 
 export const prerender = false;
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const categories = (await getCategories(insforge)) as Category[];
+const categories = (await getCategories(getDb())) as Category[];
 ---
 
 <AdminLayout title="Products" active="products">

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { $wishlist, wishlistToggle, cartAdd, $userId } from "@lib/stores";
-import { wishlistApi, cartApi } from "@lib/api-client";
-import { getInsForge } from "@lib/insforge/browser";
+import { wishlistApi, cartApi, fetchProductsByIds } from "@lib/api-client";
 
 interface Product {
   id: string;
@@ -41,11 +40,7 @@ export default function WishlistView({ currency = "INR" }: { currency?: string }
         setLoading(false);
         return;
       }
-      const insforge = getInsForge();
-      const { data } = await insforge.database
-        .from("products")
-        .select("id,name,slug,price,mrp,image_url,stock")
-        .in("id", ids);
+      const data = await fetchProductsByIds(ids);
       if (!active) return;
       setProducts((data as Product[]) ?? []);
       setLoading(false);

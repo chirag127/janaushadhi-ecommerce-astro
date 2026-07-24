@@ -3,7 +3,7 @@ import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import ProductCard from "@components/ProductCard.astro";
 import Pagination from "@components/Pagination.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getProducts, PAGE_SIZE } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import type { Currency } from "@lib/currency";
@@ -18,9 +18,8 @@ const url = new URL(Astro.request.url);
 const q = (url.searchParams.get("q") ?? "").trim();
 const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
 const { products, total } = q
-  ? await getProducts(insforge, { search: q, page })
+  ? await getProducts(getDb(), { search: q, page })
   : { products: [], total: 0 };
 
 const baseUrl = `/search?q=${encodeURIComponent(q)}`;

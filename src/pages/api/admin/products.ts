@@ -1,5 +1,10 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbInsertProduct,
+  dbUpdateProduct,
+  dbDeleteProduct,
+} from "@lib/db/repository";
 import { slugify } from "@lib/utils";
 
 export const prerender = false;
@@ -10,87 +15,66 @@ function json(data: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
   });
 }
-
 function guard(locals: App.Locals) {
   return locals.user && locals.isAdmin;
 }
 
-// Create a product
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const b = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (!b.name) return json({ error: "name required" }, 400);
-
-  const insforge = createInsForgeServer(cookies, locals);
-  const slug = (b.slug as string) || slugify(b.name as string);
-  const { data, error } = await insforge.database
-    .from("products")
-    .insert([
-      {
-        name: b.name,
-        slug,
-        drug_code: b.drug_code ?? null,
-        description: b.description ?? null,
-        category_id: b.category_id ?? null,
-        unit_size: b.unit_size ?? null,
-        mrp: Number(b.mrp ?? 0),
-        price: Number(b.price ?? 0),
-        stock: Number(b.stock ?? 0),
-        image_url: b.image_url ?? null,
-        is_active: b.is_active ?? true,
-        is_featured: b.is_featured ?? false,
-      },
-    ])
-    .select()
-    .single();
-  if (error) return json({ error: error.message }, 400);
-  return json({ product: data });
+  try {
+    const product = await dbInsertProduct(getDb(), {
+      name: b.name as string,
+      slug: (b.slug as string) || slugify(b.name as string),
+      drug_code: (b.drug_code as string) ?? null,
+      description: (b.description as string) ?? null,
+      category_id: (b.category_id as string) ?? null,
+      unit_size: (b.unit_size as string) ?? null,
+      mrp: String(Number(b.mrp ?? 0)),
+      price: String(Number(b.price ?? 0)),
+      stock: Number(b.stock ?? 0),
+      image_url: (b.image_url as string) ?? null,
+      is_active: (b.is_active as boolean) ?? true,
+      is_featured: (b.is_featured as boolean) ?? false,
+    });
+    return json({ product });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };
 
-// Update a product
-export const PUT: APIRoute = async ({ request, cookies, locals }) => {
+export const PUT: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const b = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   if (!b.id) return json({ error: "id required" }, 400);
-
-  const insforge = createInsForgeServer(cookies, locals);
-  const patch: Record<string, unknown> = {};
-  for (const key of [
-    "name",
-    "slug",
-    "drug_code",
-    "description",
-    "category_id",
-    "unit_size",
-    "mrp",
-    "price",
-    "stock",
-    "image_url",
-    "is_active",
-    "is_featured",
-  ]) {
-    if (key in b) patch[key] = b[key];
+  try {
+    const patch: Record<string, unknown> = {};
+    for (const key of [
+      "name", "slug", "drug_code", "description", "category_id", "unit_size",
+      "mrp", "price", "stock", "image_url", "is_active", "is_featured",
+    ]) {
+      if (key in b) {
+        if (key === "mrp" || key === "price") patch[key] = String(Number(b[key]));
+        else patch[key] = b[key];
+      }
+    }
+    const product = await dbUpdateProduct(getDb(), b.id as string, patch);
+    if (!product) return json({ error: "Product not found" }, 404);
+    return json({ product });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
   }
-  const { data, error } = await insforge.database
-    .from("products")
-    .update(patch)
-    .eq("id", b.id as string)
-    .select()
-    .single();
-  if (error) return json({ error: error.message }, 400);
-  return json({ product: data });
 };
 
-// Delete a product
-export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
   if (!guard(locals)) return json({ error: "Forbidden" }, 403);
   const { id } = (await request.json().catch(() => ({}))) as { id?: string };
   if (!id) return json({ error: "id required" }, 400);
-  const insforge = createInsForgeServer(cookies, locals);
-  const { error } = await insforge.database
-    .from("products")
-    .delete()
-    .eq("id", id);
-  if (error) return json({ error: error.message }, 400);
-  return json({ ok: true });
+  try {
+    await dbDeleteProduct(getDb(), id);
+    return json({ ok: true });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };

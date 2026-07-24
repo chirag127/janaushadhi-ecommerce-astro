@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@nanostores/react";
 import { $cart, cartSet, cartRemove, $userId } from "@lib/stores";
-import { cartApi } from "@lib/api-client";
-import { getInsForge } from "@lib/insforge/browser";
+import { cartApi, fetchProductsByIds } from "@lib/api-client";
 
 interface Product {
   id: string;
@@ -44,14 +43,10 @@ export default function CartView({ currency = "INR" }: { currency?: string }) {
         return;
       }
       setLoading(true);
-      const insforge = getInsForge();
-      const { data } = await insforge.database
-        .from("products")
-        .select("id,name,slug,price,mrp,image_url,stock,unit_size")
-        .in("id", ids);
+      const data = await fetchProductsByIds(ids);
       if (!active) return;
       const map: Record<string, Product> = {};
-      (data as Product[] | null)?.forEach((p) => (map[p.id] = p));
+      (data as Product[]).forEach((p) => (map[p.id] = p));
       setProducts(map);
       setLoading(false);
     })();

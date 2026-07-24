@@ -34,6 +34,6 @@ export default defineConfig({
     defaultStrategy: "viewport",
   },
   image: {
-    domains: ["ht574p3t.us-east.insforge.app"],
+    domains: [],
   },
 });

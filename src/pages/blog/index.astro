@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getBlogPosts } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import { formatDate } from "@lib/utils";
@@ -10,8 +10,7 @@ export const prerender = false;
 
 const locale = (Astro.locals.locale ?? "en") as Locale;
 const t = useTranslations(locale);
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const posts = await getBlogPosts(insforge, 50);
+const posts = await getBlogPosts(getDb(), 50);
 ---
 
 <Layout

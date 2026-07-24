@@ -1,10 +1,7 @@
 /// <reference path="../.astro/types.d.ts" />
 
 interface ImportMetaEnv {
-  readonly PUBLIC_INSFORGE_URL: string;
-  readonly PUBLIC_INSFORGE_ANON_KEY: string;
-  readonly INSFORGE_URL: string;
-  readonly INSFORGE_API_KEY: string;
+  readonly DATABASE_URL: string;
   readonly PUBLIC_RAZORPAY_TEST_MODE: string;
   readonly PUBLIC_APP_URL: string;
   readonly SITE_URL: string;
@@ -14,7 +11,7 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-type InsForgeUser = {
+type AppUser = {
   id: string;
   email?: string | null;
   name?: string | null;
@@ -23,7 +20,7 @@ type InsForgeUser = {
 
 declare namespace App {
   interface Locals {
-    user: InsForgeUser | null;
+    user: AppUser | null;
     isAdmin: boolean;
     locale: "en" | "hi";
     currency: "INR" | "USD" | "EUR" | "GBP";

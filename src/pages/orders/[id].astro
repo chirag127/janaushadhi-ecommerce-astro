@@ -1,7 +1,8 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { dbGetOrderWithItems } from "@lib/db/repository";
 import { useTranslations, type Locale } from "@lib/i18n";
 import { formatMoney, type Currency } from "@lib/currency";
 import { formatDate } from "@lib/utils";
@@ -15,14 +16,7 @@ const currency = (Astro.locals.currency ?? "INR") as Currency;
 const t = useTranslations(locale);
 const user = Astro.locals.user!;
 
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const { data } = await insforge.database
-  .from("orders")
-  .select("*, order_items(*)")
-  .eq("id", id!)
-  .eq("user_id", user.id)
-  .maybeSingle();
-const order = data as (Order & { order_items: OrderItem[] }) | null;
+const order = await dbGetOrderWithItems(getDb(), id!, user.id);
 if (!order) return Astro.redirect("/orders");
 
 const url = new URL(Astro.request.url);

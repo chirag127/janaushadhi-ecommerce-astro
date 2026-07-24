@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getCategories } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 
@@ -9,8 +9,7 @@ export const prerender = false;
 
 const locale = (Astro.locals.locale ?? "en") as Locale;
 const t = useTranslations(locale);
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const categories = await getCategories(insforge);
+const categories = await getCategories(getDb());
 ---
 
 <Layout title={t("nav.categories")} description="Shop generic medicines by therapeutic category at Jan Aushadhi.">

@@ -1,7 +1,7 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
 import { getBlogPostBySlug } from "@lib/queries";
 import { useTranslations, type Locale } from "@lib/i18n";
 import { formatDate } from "@lib/utils";
@@ -16,8 +16,7 @@ if (!slug) {
 
 const locale = (Astro.locals.locale ?? "en") as Locale;
 const t = useTranslations(locale);
-const insforge = createInsForgeServer(Astro.cookies, Astro.locals);
-const post = await getBlogPostBySlug(insforge, slug);
+const post = await getBlogPostBySlug(getDb(), slug);
 
 if (!post) {
   return Astro.redirect("/blog");

@@ -1,5 +1,10 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import {
+  dbGetCartItem,
+  dbUpsertCartItem,
+  dbUpdateCartItemQty,
+} from "@lib/db/repository";
 
 export const prerender = false;
 
@@ -10,37 +15,21 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Add (upsert) an item to the authenticated user's cart.
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return json({ error: "Not authenticated" }, 401);
   const { productId, quantity = 1 } = (await request
     .json()
     .catch(() => ({}))) as { productId?: string; quantity?: number };
   if (!productId) return json({ error: "productId required" }, 400);
 
-  const insforge = createInsForgeServer(cookies, locals);
+  const db = getDb();
   const uid = locals.user.id;
+  const existing = await dbGetCartItem(db, uid, productId);
 
-  // fetch existing
-  const { data: existing } = await insforge.database
-    .from("cart_items")
-    .select("id, quantity")
-    .eq("user_id", uid)
-    .eq("product_id", productId)
-    .maybeSingle();
-
-  const row = existing as { id: string; quantity: number } | null;
-  if (row) {
-    const { error } = await insforge.database
-      .from("cart_items")
-      .update({ quantity: row.quantity + quantity })
-      .eq("id", row.id);
-    if (error) return json({ error: error.message }, 400);
+  if (existing) {
+    await dbUpdateCartItemQty(db, uid, productId, existing.quantity + quantity);
   } else {
-    const { error } = await insforge.database
-      .from("cart_items")
-      .insert([{ user_id: uid, product_id: productId, quantity }]);
-    if (error) return json({ error: error.message }, 400);
+    await dbUpsertCartItem(db, uid, productId, quantity);
   }
   return json({ ok: true });
 };

@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
-import { createInsForgeServer } from "@lib/insforge/server";
+import { getDb } from "@lib/db/client";
+import { reviews as reviewsT } from "@lib/db/schema";
+import { and, eq } from "drizzle-orm";
 
 export const prerender = false;
 
@@ -10,7 +12,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   if (!locals.user) return json({ error: "Not authenticated" }, 401);
   const { productId, rating, title, comment } = (await request
     .json()
@@ -24,19 +26,24 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     return json({ error: "productId and rating (1-5) required" }, 400);
   }
 
-  const insforge = createInsForgeServer(cookies, locals);
-  const { error } = await insforge.database.from("reviews").upsert(
-    [
-      {
+  try {
+    const db = getDb();
+    // Upsert on (product_id, user_id)
+    await db
+      .insert(reviewsT)
+      .values({
         product_id: productId,
         user_id: locals.user.id,
         rating,
         title: title ?? null,
         comment: comment ?? null,
-      },
-    ],
-    { onConflict: "product_id,user_id" },
-  );
-  if (error) return json({ error: error.message }, 400);
-  return json({ ok: true });
+      })
+      .onConflictDoUpdate({
+        target: [reviewsT.product_id, reviewsT.user_id],
+        set: { rating, title: title ?? null, comment: comment ?? null },
+      });
+    return json({ ok: true });
+  } catch (e) {
+    return json({ error: (e as Error).message }, 400);
+  }
 };

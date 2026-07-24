@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "janaushadhi-ecommerce",
+  "name": "janaushadhi-astro",
   "compatibility_date": "2025-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "kv_namespaces": [

@@ -1,0 +1,45 @@
+name: Test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  unit:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm test
+        env:
+          DATABASE_URL: "postgresql://fake:fake@localhost/fake"
+
+  typecheck:
+    name: Type check (astro check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm check
+        env:
+          DATABASE_URL: "postgresql://fake:fake@localhost/fake"
+          NEON_AUTH_BASE_URL: "https://fake.neon.tech"
+          PUBLIC_NEON_AUTH_BASE_URL: "https://fake.neon.tech"
+          NEON_AUTH_COOKIE_SECRET: "fake-secret-32-chars-long-padding"

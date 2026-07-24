@@ -90,7 +90,7 @@ export default function WishlistView({ currency = "INR" }: { currency?: string }
                 className="h-full w-full object-contain p-4"
               />
             ) : (
-              <span className="text-4xl text-brand-300">💊</span>
+              <img src="/placeholder-product.svg" alt="Product placeholder" className="h-full w-full object-contain p-4" />
             )}
           </a>
           <div className="flex flex-1 flex-col p-3">

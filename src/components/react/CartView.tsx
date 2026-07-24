@@ -107,7 +107,7 @@ export default function CartView({ currency = "INR" }: { currency?: string }) {
                   className="h-full w-full object-contain p-2"
                 />
               ) : (
-                <span className="text-brand-300 text-3xl">💊</span>
+                <img src="/placeholder-product.svg" alt="Product placeholder" className="h-full w-full object-contain p-2" />
               )}
             </a>
             <div className="flex flex-1 flex-col">

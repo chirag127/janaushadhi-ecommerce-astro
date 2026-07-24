@@ -29,11 +29,7 @@ const onRequest = !product.price || product.price <= 0;
             class="h-full w-full object-contain p-4 transition-transform group-hover:scale-105"
           />
         ) : (
-          <div class="grid h-full w-full place-items-center text-brand-300">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m10.5 20.25 7.5-7.5a3.75 3.75 0 1 0-5.303-5.303l-8.485 8.485a2.5 2.5 0 0 0 3.536 3.536l7.07-7.07" />
-            </svg>
-          </div>
+          <img src="/placeholder-product.svg" alt="Product placeholder" loading="lazy" decoding="async" class="h-full w-full object-contain p-4" />
         )
       }
     </a>

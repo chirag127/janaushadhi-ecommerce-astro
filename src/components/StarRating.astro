@@ -15,7 +15,7 @@ const stars = [1, 2, 3, 4, 5];
   <div class="flex text-amber-400">
     {
       stars.map((s) => {
-        const filled = s <= full;
+        const filled = full >= s;
         const isHalf = !filled && s === full + 1 && half;
         return (
           <svg xmlns="http://www.w3.org/2000/svg" class={cls} viewBox="0 0 24 24" fill={filled ? "currentColor" : isHalf ? "url(#half)" : "none"} stroke="currentColor" stroke-width="1.2">

@@ -26,6 +26,17 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 export const userRoleEnum = pgEnum("user_role", ["customer", "admin"]);
 export const discountTypeEnum = pgEnum("discount_type", ["percent", "fixed"]);
 
+// ---- users (local mirror of Better Auth subjects) ----
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  email_verified: boolean("email_verified").notNull().default(false),
+  name: text("name"),
+  image: text("image"),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---- profiles ----
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),

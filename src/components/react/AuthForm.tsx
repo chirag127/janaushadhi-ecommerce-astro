@@ -25,24 +25,32 @@ export default function AuthForm({ mode, next = "/" }: Props) {
     setInfo("");
     setLoading(true);
     try {
+      // POST to /api/auth/sign-in/email or /api/auth/sign-up/email (Better Auth paths)
       const endpoint =
-        mode === "login" ? "/api/auth/signin" : "/api/auth/signup";
+        mode === "login" ? "/api/auth/sign-in/email" : "/api/auth/sign-up/email";
+      const body =
+        mode === "login"
+          ? { email, password }
+          : { email, password, name: fullName };
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify(body),
       });
       const data = (await res.json()) as {
-        error?: string;
+        error?: string | { message?: string };
         user?: unknown;
-        requiresVerification?: boolean;
+        token?: string;
       };
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
-
-      if (mode === "register" && data.requiresVerification) {
-        setInfo(
-          "Account created! Please check your email to verify, then log in.",
-        );
+      if (!res.ok) {
+        const msg =
+          typeof data.error === "string"
+            ? data.error
+            : (data.error as { message?: string })?.message ?? "Something went wrong";
+        throw new Error(msg);
+      }
+      if (mode === "register") {
+        setInfo("Account created! Check your email to verify, then log in.");
         return;
       }
       location.assign(next);
@@ -58,9 +66,7 @@ export default function AuthForm({ mode, next = "/" }: Props) {
     try {
       await getInsForge().auth.signInWithOAuth(provider, {
         redirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        additionalParams: { prompt: "select_account" },
       });
-      // SDK redirects the browser to the provider.
     } catch (err) {
       setError(err instanceof Error ? err.message : "OAuth failed");
     }

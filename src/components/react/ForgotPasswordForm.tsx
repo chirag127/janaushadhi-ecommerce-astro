@@ -11,10 +11,10 @@ export default function ForgotPasswordForm() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/forgot", {
+      const res = await fetch("/api/auth/forget-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, redirectTo: `${window.location.origin}/reset-password` }),
       });
       const data = (await res.json()) as { error?: string; ok?: boolean };
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");

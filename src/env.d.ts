@@ -5,6 +5,9 @@ interface ImportMetaEnv {
   readonly PUBLIC_RAZORPAY_TEST_MODE: string;
   readonly PUBLIC_APP_URL: string;
   readonly SITE_URL: string;
+  // Neon Managed Better Auth (oriz-accounts hub)
+  readonly NEON_AUTH_BASE_URL: string;
+  readonly NEON_AUTH_COOKIE_SECRET: string;
 }
 
 interface ImportMeta {

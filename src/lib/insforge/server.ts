@@ -1,8 +1,53 @@
 /**
- * Server utilities: env resolution + auth stub.
- * InsForge SDK removed — auth is a separate lane (oriz-accounts via Better Auth).
+ * Server-side auth helpers.
+ * Resolves the current user from the Better Auth session cookie sent by
+ * the oriz-accounts hub (NEON_AUTH_BASE_URL).
+ *
+ * Session check: GET /api/auth/get-session forwarded to hub via the
+ * [...all] proxy, or directly from hub using the incoming cookie header.
  */
 import type { AstroCookies } from "astro";
+
+export interface AuthUser {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+  emailVerified?: boolean;
+  [key: string]: unknown;
+}
+
+function getAuthBaseUrl(): string {
+  const fromVite = (import.meta.env as Record<string, string | undefined>)
+    .NEON_AUTH_BASE_URL;
+  if (fromVite) return fromVite;
+  if (typeof process !== "undefined" && process.env?.NEON_AUTH_BASE_URL) {
+    return process.env.NEON_AUTH_BASE_URL;
+  }
+  return "";
+}
+
+/**
+ * Resolve the current authenticated user from the hub session.
+ * Returns null when the user is not signed in or the hub is unreachable.
+ */
+export async function getCurrentUser(
+  cookieHeader: string | null,
+): Promise<AuthUser | null> {
+  const base = getAuthBaseUrl();
+  if (!base) return null; // hub not configured yet
+  try {
+    const res = await fetch(`${base.replace(/\/$/, "")}/api/auth/get-session`, {
+      method: "GET",
+      headers: cookieHeader ? { cookie: cookieHeader } : {},
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { user?: AuthUser | null } | null;
+    return body?.user ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export function getEnv(_locals: App.Locals | undefined, key: string): string {
   const fromImportMeta = (import.meta.env as Record<string, string | undefined>)[key];
@@ -13,17 +58,7 @@ export function getEnv(_locals: App.Locals | undefined, key: string): string {
   return "";
 }
 
-// ---- Auth stub ----
-// Full auth wiring (oriz-accounts / Better Auth) is a separate lane.
-// These stubs let the app compile; auth API routes return graceful errors.
-
-export interface AuthUser {
-  id: string;
-  email?: string | null;
-  name?: string | null;
-  [key: string]: unknown;
-}
-
+// ---- Legacy stub types (kept for API-route backward compat during transition) ----
 export interface AuthStub {
   getCurrentUser(): Promise<{ data: { user: AuthUser | null } }>;
   signInWithPassword(
@@ -38,21 +73,13 @@ export interface AuthStub {
   ): Promise<{ error: { message: string } | null }>;
 }
 
-/** Thin auth stub — replace body when Better Auth is wired. */
+/** @deprecated Use getCurrentUser() + the [...all] proxy route instead. */
 export function createAuthStub(_cookies: AstroCookies): AuthStub {
   return {
-    async getCurrentUser() {
-      return { data: { user: null } };
-    },
-    async signInWithPassword() {
-      return { data: null, error: { message: "Auth not yet configured" } };
-    },
-    async signUp() {
-      return { data: null, error: { message: "Auth not yet configured" } };
-    },
+    async getCurrentUser() { return { data: { user: null } }; },
+    async signInWithPassword() { return { data: null, error: { message: "Use /api/auth/* proxy" } }; },
+    async signUp() { return { data: null, error: { message: "Use /api/auth/* proxy" } }; },
     async signOut() {},
-    async sendResetPasswordEmail() {
-      return { error: null };
-    },
+    async sendResetPasswordEmail() { return { error: null }; },
   };
 }

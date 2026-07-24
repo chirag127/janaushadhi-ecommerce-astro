@@ -8,5 +8,8 @@
       "binding": "SESSION",
       "id": "d5209da48d9b4794984570f4cae050bc"
     }
-  ]
+  ],
+  "vars": {
+    "PUBLIC_NEON_AUTH_BASE_URL": "https://ep-rough-bar-ax3guohy.neonauth.c-4.us-east-2.aws.neon.tech/neondb/auth"
+  }
 }

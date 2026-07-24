@@ -1,41 +1,23 @@
 import { useEffect, useState } from "react";
-import { getInsForge } from "@lib/insforge/browser";
 
 /**
- * Client-side OAuth callback handler. The InsForge SSR browser client sets
- * detectOAuthCallback:false, and the PKCE verifier lives in sessionStorage
- * (client-only), so the code→session exchange MUST run in the browser here.
- * After exchange the SDK persists the session cookies; we then hard-navigate
- * to `next` so the SSR middleware picks up the new session.
+ * OAuth callback handler for Better Auth.
+ * Better Auth handles the code exchange server-side via the /api/auth/callback/:provider route.
+ * This component just waits briefly then navigates to `next` — the session cookie
+ * is already set by the hub before the browser lands here.
  */
 export default function OAuthCallback({ next = "/" }: { next?: string }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("insforge_code");
-      const oauthError = url.searchParams.get("error");
-      if (oauthError) {
-        setError("Sign-in was cancelled or failed.");
-        return;
-      }
-      if (!code) {
-        setError("Missing authorization code.");
-        return;
-      }
-      try {
-        const { error: exErr } = await getInsForge().auth.exchangeOAuthCode(code);
-        if (exErr) {
-          setError(exErr.message ?? "Could not complete sign-in.");
-          return;
-        }
-        // Refresh SSR cookies, then navigate so middleware sees the session.
-        window.location.assign(next);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Sign-in failed.");
-      }
-    })();
+    const url = new URL(window.location.href);
+    const oauthError = url.searchParams.get("error");
+    if (oauthError) {
+      setError("Sign-in was cancelled or failed.");
+      return;
+    }
+    // Better Auth sets the session cookie server-side. Navigate to destination.
+    window.location.assign(next);
   }, [next]);
 
   return (

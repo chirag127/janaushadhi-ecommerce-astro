@@ -24,7 +24,7 @@ const p = { full_name: profile?.full_name ?? "", phone: profile?.phone ?? "" };
       <a href="/account" class="block rounded-lg bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">{t("nav.account")}</a>
       <a href="/orders" class="block rounded-lg px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.orders")}</a>
       <a href="/wishlist" class="block rounded-lg px-4 py-2.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.wishlist")}</a>
-      <form method="post" action="/api/auth/signout">
+      <form method="post" action="/api/auth/sign-out">
         <button type="submit" class="block w-full rounded-lg px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800">{t("nav.logout")}</button>
       </form>
     </aside>

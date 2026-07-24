@@ -12,23 +12,21 @@ export default function ResetPasswordForm() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // InsForge link reset flow appends ?token=...&insforge_status=ready&insforge_type=reset_password
+    // Better Auth reset link appends ?token=...
     const params = new URLSearchParams(window.location.search);
     const t = params.get("token");
-    const s = params.get("insforge_status");
-    const e = params.get("insforge_error");
+    const e = params.get("error");
 
-    if (s === "error" || e) {
-      setStatusError(e ?? "The reset link is invalid or has expired.");
+    if (e) {
+      setStatusError(e === "invalid_token" ? "The reset link is invalid or has expired." : e);
       setStatus("error");
       return;
     }
-    if (s === "ready" && t) {
+    if (t) {
       setToken(t);
       setStatus("ready");
       return;
     }
-    // No recognised params — show guidance
     setStatusError("No valid reset token found. Please request a new password reset link.");
     setStatus("error");
   }, []);
@@ -46,8 +44,7 @@ export default function ResetPasswordForm() {
     setError("");
     setSubmitting(true);
     try {
-      const insforge = getInsForge();
-      const { error: resetError } = await insforge.auth.resetPassword({
+      const { error: resetError } = await getInsForge().auth.resetPassword({
         newPassword: password,
         otp: token!,
       });

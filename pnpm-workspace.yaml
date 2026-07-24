@@ -1,6 +1,7 @@
+packages:
+  - .
 allowBuilds:
-  esbuild: false
+  core-js: true
+  esbuild: true
   sharp: false
   workerd: false
-minimumReleaseAgeExclude:
-  - '@insforge/sdk@1.4.5'

@@ -1,0 +1,6 @@
+# sops config — same age key as the workspace root (one keypair for everything).
+# Encrypt this repo's .env:  sops -e .env > .env.enc   (SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt)
+# .env stays gitignored; commit only .env.enc.
+creation_rules:
+  - path_regex: \.env(\.local)?$
+    age: age1c40qjamejzrp9cajle9g0dss25mmsmyaq6uaa2pgmyr3pflsy4qspgw5c4

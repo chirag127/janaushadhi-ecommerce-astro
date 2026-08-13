@@ -25,7 +25,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: MegaLinter
-        uses: oxsecurity/megalinter@v8
+        uses: oxsecurity/megalinter@v10
         env:
           MEGALINTER_FLAVOR: all
           DISABLE_ERRORS: true

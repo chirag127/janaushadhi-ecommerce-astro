@@ -19,7 +19,7 @@ jobs:
       PUBLIC_NEON_AUTH_BASE_URL: ${{ secrets.NEON_AUTH_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
       - uses: actions/setup-node@v4

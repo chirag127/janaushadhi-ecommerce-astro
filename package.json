@@ -23,7 +23,7 @@
     "@neondatabase/auth": "0.4.2-beta",
     "@neondatabase/serverless": "^1.1.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.1.0",
+    "astro": "^7.4.2",
     "drizzle-orm": "^0.45.2",
     "nanostores": "^1.0.1",
     "react": "^19.2.0",

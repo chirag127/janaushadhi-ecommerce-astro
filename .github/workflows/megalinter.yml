@@ -1,5 +1,3 @@
-# MegaLinter GitHub Action configuration
-# Auto-fixes formatting and linting issues on every push and PR
 name: MegaLinter
 
 on:
@@ -8,22 +6,12 @@ on:
   pull_request:
     branches: [main, master]
 
-env:
-  # Use cupcake flavor (most common languages, ~700MB vs 2GB full)
-  MEGALINTER_FLAVOR: all
-  # Auto-fix all fixable issues
-  APPLY_FIXES: all
-  APPLY_FIXES_EVENT: push
-  APPLY_FIXES_MODE: commit
-  # Don't fail build on formatter issues (only real errors fail)
-  FORMATTERS_DISABLE_ERRORS: true
-  # GitHub token for auto-fix commits
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
-  contents: write
-  pull-requests: write
-  statuses: write
+  contents: read
+
+concurrency:
+  group: megalinter-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   megalinter:
@@ -37,17 +25,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: MegaLinter
-        id: ml
         uses: oxsecurity/megalinter@v8
         env:
+          MEGALINTER_FLAVOR: all
+          DISABLE_ERRORS: true
+          VALIDATE_ALL_CODEBASE: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload MegaLinter reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MegaLinter reports
-          path: |
-            megalinter-reports
-            mega-linter.log
-          retention-days: 7
